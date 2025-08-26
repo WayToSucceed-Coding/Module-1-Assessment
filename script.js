@@ -1,0 +1,1436 @@
+// ----------------------
+// Global state
+// ----------------------
+let codeMirrorEditor = null;
+let pyodide = null;
+
+let currentModuleData = null;
+let currentTopicIndex = 0;
+let currentQuestionIndex = 0;
+let linearItems = [];
+const answeredMap = new Map(); // index -> {status, topic, answer, correctAnswer}
+const codeMap = new Map();     // index -> user code
+const topicProgress = new Map(); // topic -> {completed, total, correct}
+
+const moduleInfo = document.getElementById('moduleInfo');
+const letsBeginBtn = document.getElementById('letsBeginBtn');
+
+const assessmentArea = document.getElementById('assessmentArea');
+const welcomeView = document.getElementById('welcomeView');
+const topicSelectionView = document.getElementById('topicSelectionView');
+const topicSelectionGrid = document.getElementById('topicSelectionGrid');
+
+const mcqView = document.getElementById('mcqView');
+const mcqQuestionEl = document.getElementById('mcqQuestion');
+const mcqOptionsEl = document.getElementById('mcqOptions');
+const mcqExplanationEl = document.getElementById('mcqExplanation');
+const questionNav = document.getElementById('questionNav');
+const mcqSubmitBtn = document.getElementById("mcqSubmitBtn");
+const runBtn = document.getElementById("runBtn");
+const submitBtn = document.getElementById("submitBtn");
+
+const finishBtn = document.getElementById('finishBtn');
+const finishReportView = document.getElementById('finishReportView');
+
+const codeView = document.getElementById('codeView');
+const taskTitle = document.getElementById('taskTitle');
+const taskDescription = document.getElementById('taskDescription');
+
+// ----------------------
+// Module loading & UI
+// ----------------------
+async function loadModuleIntoUI() {
+    try {
+        const resp = await fetch('modules/assessment-topics.json', { cache: 'no-store' });
+        currentModuleData = resp.ok ? await resp.json() : EMBEDDED_DEMO_MODULE;
+        console.log('Loaded module data:', currentModuleData);
+        moduleInfo.textContent = currentModuleData.moduleName || 'Demo Module';
+        buildTopicSelectionGrid();
+        currentTopicIndex = 0;
+    } catch (err) {
+        console.error(err);
+        moduleInfo.textContent = 'Error loading module';
+    }
+}
+
+function buildTopicSelectionGrid() {
+    if (!currentModuleData || !currentModuleData.topics) return;
+
+    topicSelectionGrid.innerHTML = '';
+    const completedTopics = JSON.parse(localStorage.getItem('completedTopics') || '[]');
+
+    currentModuleData.topics.forEach((topic, index) => {
+        const totalQuestions = (topic.mcqs?.length || 0) + (topic.codeTasks?.length || 0);
+        topicProgress.set(topic.name, { completed: 0, total: totalQuestions, correct: 0 });
+
+        const topicButton = document.createElement('button');
+        topicButton.className = 'topic-button';
+        topicButton.textContent = topic.name;
+
+        if (completedTopics.includes(topic.name)) {
+            topicButton.disabled = true;
+            topicButton.classList.add('completed'); // optional CSS styling
+        } else {
+            topicButton.onclick = () => switchToTopic(index);
+        }
+
+        topicSelectionGrid.appendChild(topicButton);
+    });
+
+    // Toggle top-level overall results button if all topics completed
+    const showOverallTop = document.getElementById('showOverallResultsBtnTop');
+    if (showOverallTop) {
+        if (completedTopics.length && currentModuleData.topics && completedTopics.length === currentModuleData.topics.length) {
+            showOverallTop.style.display = '';
+            showOverallTop.onclick = () => {
+                document.getElementById('topicSelectionPane').style.display = 'none';
+                showOverallResults();
+            };
+        } else {
+            showOverallTop.style.display = 'none';
+            showOverallTop.onclick = null;
+        }
+    }
+}
+document.getElementById('backBtn').onclick = () => {
+    topicReportView.style.display = 'none';
+    document.getElementById('topicSelectionPane').style.display = 'block';
+    disableCompletedTopics();
+};
+
+function switchToTopic(topicIndex) {
+    currentTopicIndex = topicIndex;
+    currentQuestionIndex = 0;
+    loadTopicQuestions();
+
+    // Hide topic selection pane and show assessment pane
+    document.getElementById('topicSelectionPane').style.display = 'none';
+    document.getElementById('assessmentArea').style.display = 'grid';
+
+    // Add assessment mode for two-column layout
+    document.querySelector('.main-container').classList.add('assessment-mode');
+
+    // Update the topic title
+    const topic = currentModuleData.topics[currentTopicIndex];
+    document.getElementById('currentTopicTitle').textContent = topic.name;
+
+    // Show question container
+    questionContainer.style.display = 'block';
+}
+
+function loadTopicQuestions() {
+    if (!currentModuleData || !currentModuleData.topics[currentTopicIndex]) return;
+
+    const topic = currentModuleData.topics[currentTopicIndex];
+    linearItems = [];
+
+    // Add MCQs for this topic
+    (topic.mcqs || []).forEach(q => {
+        linearItems.push({
+            type: 'mcq',
+            data: q,
+            topic: topic.name
+        });
+    });
+
+    // Add code tasks for this topic
+    (topic.codeTasks || []).forEach(t => {
+        linearItems.push({
+            type: 'code',
+            data: t,
+            topic: topic.name
+        });
+    });
+
+
+    renderCurrentItem();
+    renderQuestionNav();
+}
+
+function renderCurrentItem() {
+    setOutputs();
+    if (!linearItems.length || currentQuestionIndex < 0 || currentQuestionIndex >= linearItems.length) return;
+
+    const item = linearItems[currentQuestionIndex];
+
+    // Update question header with number
+    const questionNumberEl = document.getElementById('questionNumber');
+    if (questionNumberEl) {
+        questionNumberEl.textContent = `${currentQuestionIndex + 1} of ${linearItems.length}`;
+    }
+
+    if (item.type === 'mcq') renderMcqItem(item.data);
+    else renderCodeItem(item.data);
+
+    highlightQuestionNav();
+}
+
+function renderQuestionNav() {
+    if (!questionNav) return;
+    questionNav.innerHTML = '';
+    linearItems.forEach((it, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'qbtn' + (it.type === 'code' ? ' code' : '');
+        btn.textContent = (idx + 1).toString();
+        const status = answeredMap.get(`${currentTopicIndex}-${idx}`)?.status;
+        if (status) btn.classList.add('done');
+        if (idx === currentQuestionIndex) btn.classList.add('active');
+        btn.onclick = () => { currentQuestionIndex = idx; renderCurrentItem(); };
+        questionNav.appendChild(btn);
+    });
+
+    // Ensure the navigation is displayed as a row
+    questionNav.style.display = 'flex';
+    questionNav.style.flexDirection = 'row';
+    questionNav.style.flexWrap = 'wrap';
+}
+
+function highlightQuestionNav() {
+    if (!questionNav) return;
+    Array.from(questionNav.children).forEach((c, i) => {
+        c.classList.toggle('active', i === currentQuestionIndex);
+        const status = answeredMap.get(`${currentTopicIndex}-${i}`)?.status;
+        c.classList.toggle('done', Boolean(status));
+    });
+}
+
+function escapeHtml(text) {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function renderQuestionText(question) {
+    const containerFont = 'Arial, sans-serif'; // main font
+    const lines = question.split('\n');
+    return `<div style="font-family:${containerFont}; font-size:16px;">` +
+        lines.map(line => {
+            if (line.startsWith('    ') || line.startsWith('\t')) {
+                // code line: preserve indentation, no <pre>
+                return `<code style="white-space: pre;">${line.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code><br>`;
+            } else {
+                return `<span>${line}</span><br>`;
+            }
+        }).join('') +
+        `</div>`;
+}
+
+
+// ----------------------
+// MCQ Rendering
+// ----------------------
+function renderMcqItem(mcq) {
+    mcqView.style.display = '';
+    codeView.style.display = 'none';
+    mcqQuestionEl.innerHTML = renderQuestionText(mcq.question);
+    mcqExplanationEl.textContent = '';
+    mcqExplanationEl.className = 'explanation muted';
+    mcqOptionsEl.innerHTML = '';
+
+    (mcq.options || []).forEach((opt, i) => {
+        const id = `opt_${currentTopicIndex}_${currentQuestionIndex}_${i}`;
+        const wrapper = htmlToElement(`
+        <label style="display:flex;gap:6px;align-items:flex-start;">
+            <input type="radio" name="mcq_${currentTopicIndex}_${currentQuestionIndex}" value="${i}" id="${id}" />
+            <span>${escapeHtml(opt)}</span>
+        </label>
+    `);
+        mcqOptionsEl.appendChild(wrapper);
+    });
+}
+
+
+// ----------------------
+// Code Rendering
+// ----------------------
+function renderCodeItem(task) {
+
+
+    mcqView.style.display = 'none';
+    codeView.style.display = 'block';
+    taskTitle.textContent = task.question || '';
+    taskDescription.textContent = task.description || '';
+
+
+
+    const savedCode = codeMap.get(`${currentTopicIndex}-${currentQuestionIndex}`);
+    const starter = savedCode || task.starterCode || '# Write your solution here\n';
+    if (codeMirrorEditor) {
+        codeMirrorEditor.setValue(starter);
+
+        codeMirrorEditor.setOption('readOnly', false);
+        codeMirrorEditor.on('change', () => {
+            codeMap.set(`${currentTopicIndex}-${currentQuestionIndex}`, codeMirrorEditor.getValue());
+        });
+
+        // Refresh the editor to ensure proper rendering
+        setTimeout(() => {
+            codeMirrorEditor.refresh();
+        }, 50);
+    }
+
+
+    runBtn.disabled = false;
+    submitBtn.disabled = false;
+
+    // Clear previous output
+    // setOutputs();
+}
+
+// ----------------------
+// Editor setup
+// ----------------------
+function setupEditor() {
+    if (codeMirrorEditor) return codeMirrorEditor;
+
+    const textarea = document.getElementById("editor");
+    codeMirrorEditor = CodeMirror.fromTextArea(textarea, {
+        mode: "python",
+        lineNumbers: true,
+        indentUnit: 4,
+        theme: "dracula",
+        lineWrapping: true,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        autoCloseQuotes: true,
+        foldGutter: false,
+        gutters: ["CodeMirror-linenumbers"],
+extraKeys: {
+    "Tab": function(cm) {
+        if (cm.somethingSelected()) cm.indentSelection("add");
+        else cm.replaceSelection("    ", "end");
+    },
+    "Shift-Tab": "indentLess",
+    "Backspace": function(cm) {
+        const cursor = cm.getCursor();
+        const line = cm.getLine(cursor.line);
+        const beforeCursor = line.slice(0, cursor.ch);
+
+        // If cursor is only in leading whitespace
+        if (/^\s+$/.test(beforeCursor)) {
+            const indentSize = cm.getOption("indentUnit") || 4;
+            const toRemove = beforeCursor.length % indentSize || indentSize;
+            cm.replaceRange("", {line: cursor.line, ch: cursor.ch - toRemove}, {line: cursor.line, ch: cursor.ch});
+        } else {
+            cm.deleteH(-1, "char"); // normal backspace
+        }
+    }
+},indentWithTabs: false,
+        smartIndent: true,
+        electricChars: true,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        autoCloseQuotes: true,
+        styleActiveLine: false,
+        lineWiseCopyCut: true,
+        pasteLinesPerSelection: true
+    });
+
+    // Set the size after initialization
+    setTimeout(() => {
+        codeMirrorEditor.setSize("100%", "100%");
+        codeMirrorEditor.refresh();
+
+        // Force refresh the gutter positioning
+        setTimeout(() => {
+            codeMirrorEditor.refresh();
+            // Ensure proper positioning
+            const editorElement = codeMirrorEditor.getWrapperElement();
+            if (editorElement) {
+                editorElement.style.width = '100%';
+                editorElement.style.height = '100%';
+                editorElement.style.margin = '0';
+                editorElement.style.padding = '0';
+                editorElement.style.borderRadius = '0';
+            }
+        }, 50);
+    }, 100);
+
+    return codeMirrorEditor;
+}
+
+
+// ----------------------
+// Pyodide Execution
+// ----------------------
+async function ensurePyodide() {
+    if (pyodide) return pyodide;
+    pyodide = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/' });
+    return pyodide;
+}
+
+// ----------------------
+// Run Code (student wants to test their code)
+// ----------------------
+async function runCurrentCode() {
+    const item = linearItems[currentQuestionIndex];
+    if (!item || item.type !== 'code') return;
+
+    const code = codeMirrorEditor.getValue();
+    runBtn.disabled = true;
+    setOutputs({ message: 'Running your code…', status: 'info' });
+
+    try {
+        const pyo = await ensurePyodide();
+
+        // Override input() to use browser prompt
+        await pyo.runPythonAsync(`
+import builtins
+def js_input(prompt_text=""):
+    from js import prompt
+    return prompt(prompt_text)
+builtins.input = js_input
+`);
+
+        // Capture stdout and stderr
+        const prolog = `
+import sys, io
+_stdout_buffer = io.StringIO()
+_stderr_buffer = io.StringIO()
+_sys_stdout, _sys_stderr = sys.stdout, sys.stderr
+sys.stdout, sys.stderr = _stdout_buffer, _stderr_buffer
+`;
+
+        const epilog = `
+_out_text = _stdout_buffer.getvalue()
+_err_text = _stderr_buffer.getvalue()
+sys.stdout, sys.stderr = _sys_stdout, _sys_stderr
+`;
+
+        await pyo.runPythonAsync(prolog + code + epilog);
+
+        const outText = pyo.globals.get('_out_text') || '';
+        const errText = pyo.globals.get('_err_text') || '';
+
+        if (errText) setOutputs({ message: `Error:\n${errText}`, status: 'error' });
+        else if (outText) setOutputs({ message: `Output:\n${outText}`, status: 'success' });
+        else setOutputs({ message: 'Code executed successfully (no output)', status: 'success' });
+
+    } catch (err) {
+        setOutputs({ message: `Error: ${err.message}`, status: 'error' });
+    } finally {
+        runBtn.disabled = false;
+    }
+}
+
+async function submitCurrentCode() {
+    const item = linearItems[currentQuestionIndex];
+    if (!item || item.type !== 'code') return;
+
+    const code = codeMirrorEditor.getValue();
+    runBtn.disabled = true;
+    submitBtn.disabled = true;
+    setOutputs({ message: 'Submitting your code…', status: 'info' });
+
+    try {
+        const pyo = await ensurePyodide();
+
+        // Get test cases from the current item
+        let testCases = item.data.testCases || [];
+        // Backward compatibility: if only expectedOutput is provided, create a basic single test
+        if (testCases.length === 0 && item.data.expectedOutput) {
+            testCases = [{
+                mode: 'io',
+                input: [],
+                expected: String(item.data.expectedOutput).trim()
+            }];
+        }
+        if (testCases.length === 0) {
+            throw new Error('No test cases defined for this problem');
+        }
+
+        let allPassed = true;
+        const results = [];
+
+        // Run each test case
+        for (let i = 0; i < testCases.length; i++) {
+            const testCase = testCases[i];
+            
+            try {
+                const mode = (testCase.mode || (testCase.call ? 'function' : 'io'));
+
+                if (mode === 'io') {
+                    // Clear and set up IO capture and mocked input
+                await pyo.runPythonAsync(`
+import sys, io, json, builtins
+_stdout_buffer = io.StringIO()
+_stderr_buffer = io.StringIO()
+_sys_stdout, _sys_stderr = sys.stdout, sys.stderr
+sys.stdout, sys.stderr = _stdout_buffer, _stderr_buffer
+
+_test_inputs_json = '''${JSON.stringify(Array.isArray(testCase.input) ? testCase.input : [testCase.input])}'''
+_test_inputs = json.loads(_test_inputs_json)
+_input_index = 0
+
+def mock_input(prompt=""):
+    global _input_index
+    if _input_index < len(_test_inputs):
+        value = _test_inputs[_input_index]
+        _input_index += 1
+        return str(value)
+        return ""
+
+builtins.input = mock_input
+`);
+
+                    // Execute the user's code in an isolated namespace per test
+                    await pyo.runPythonAsync(`
+import json
+_code_src = json.loads('''${JSON.stringify(code)}''')
+_ns = {}
+exec(_code_src, _ns, _ns)
+`);
+
+                    // Restore and capture
+                await pyo.runPythonAsync(`
+_out_text = _stdout_buffer.getvalue()
+_err_text = _stderr_buffer.getvalue()
+sys.stdout, sys.stderr = _sys_stdout, _sys_stderr
+`);
+
+                const outText = pyo.globals.get('_out_text') || '';
+                const errText = pyo.globals.get('_err_text') || '';
+                    if (errText) throw new Error(errText);
+
+                    // For IO tasks, allow selecting which lines to compare
+                    const linesMode = testCase.lines || (testCase.onlyLastLine === false ? 'all' : 'last'); // 'last' | 'all'
+                    const cleanedLines = outText.split('\n').map(s => s.trim()).filter(Boolean);
+                    const actualOutput = linesMode === 'last' ? (cleanedLines[cleanedLines.length - 1] || '') : cleanedLines.join(' ');
+
+                    // Optional strict mode (no normalization)
+                    if (testCase.strict === true) {
+                        const passedStrict = actualOutput === String(testCase.expected);
+                        const passed = passedStrict;
+                        if (!passed) allPassed = false;
+                        results.push({
+                            testNumber: i + 1,
+                            input: Array.isArray(testCase.input) ? testCase.input : [testCase.input],
+                            expected: testCase.expected,
+                            actual: actualOutput,
+                            passed: passed,
+                            fullOutput: outText
+                        });
+                        continue;
+                    }
+
+                    // Regex mode for flexible matching
+                    if (testCase.compare === 'regex' && typeof testCase.expectedRegex === 'string') {
+                        let re = null;
+                        try {
+                            re = new RegExp(testCase.expectedRegex);
+                        } catch (_) {
+                            re = null;
+                        }
+                        const passed = re ? re.test(actualOutput) : false;
+                        if (!passed) allPassed = false;
+                        results.push({
+                            testNumber: i + 1,
+                            input: Array.isArray(testCase.input) ? testCase.input : [testCase.input],
+                            expected: `/${testCase.expectedRegex}/`,
+                            actual: actualOutput,
+                            passed: passed,
+                            fullOutput: outText
+                        });
+                        continue;
+                    }
+
+                    // Normalize both sides: lowercase, collapse spaces, normalize punctuation spacing
+                    const normalize = (s) => {
+                        let t = String(s).toLowerCase().trim();
+                        t = t.replace(/\s+/g, ' ');            // collapse spaces
+                        t = t.replace(/\s*,\s*/g, ', ');       // comma spacing -> ", "
+                        t = t.replace(/\s*:\s*/g, ': ');       // colon spacing -> ": "
+                        t = t.replace(/\s*;\s*/g, '; ');       // semicolon spacing
+                        t = t.replace(/\s*\.\s*/g, '.');      // no space before period
+                        t = t.replace(/\s*!\s*/g, '!');        // no space before exclamation
+                        t = t.replace(/\s*\?\s*/g, '?');      // no space before question mark
+                        return t;
+                    };
+                    const stripPunct = (s) => normalize(s).replace(/[.,;:!?"'`]/g, '');
+                    const stripControl = (s) => normalize(s).replace(/[\u0000-\u001F\u007F]/g, '');
+                    const expectedOutput = normalize(testCase.expected);
+                    const actualOutputLower = normalize(actualOutput);
+                    let passed = (actualOutputLower === expectedOutput);
+                    if (!passed) {
+                        // Fallbacks: contains check and punctuation-insensitive compare
+                        const actualNoP = stripPunct(actualOutput);
+                        const expectedNoP = stripPunct(testCase.expected);
+                        passed = passed || (actualOutputLower.includes(expectedOutput));
+                        passed = passed || (actualNoP === expectedNoP);
+                        passed = passed || (actualNoP.includes(expectedNoP));
+                        // Control-char-insensitive compare
+                        const actualNoCtrl = stripControl(actualOutput);
+                        passed = passed || (normalize(actualNoCtrl) === expectedOutput);
+                    }
+
+                if (!passed) allPassed = false;
+                results.push({
+                    testNumber: i + 1,
+                    input: Array.isArray(testCase.input) ? testCase.input : [testCase.input],
+                    expected: testCase.expected,
+                    actual: actualOutput,
+                    passed: passed,
+                    fullOutput: outText
+                });
+
+                } else if (mode === 'function') {
+                    // Execute user's code to define functions in isolated namespace
+                    await pyo.runPythonAsync(`
+import json
+_code_src = json.loads('''${JSON.stringify(code)}''')
+_ns = {}
+exec(_code_src, _ns, _ns)
+`);
+
+                    // Prepare function call with JSON-encoded args/kwargs
+                    const call = testCase.call || {};
+                    const funcName = call.name;
+                    const argsJson = JSON.stringify(call.args || []);
+                    const kwargsJson = JSON.stringify(call.kwargs || {});
+                    const expectedProvided = Object.prototype.hasOwnProperty.call(testCase, 'expectedReturn');
+                    const expectedPy = testCase.expectedPy; // optional python expression string
+
+                    await pyo.runPythonAsync(`
+import json
+_fn_name = ${JSON.stringify(funcName)}
+_args = json.loads('''${argsJson}''')
+_kwargs = json.loads('''${kwargsJson}''')
+_expected_set = ${expectedProvided ? 'True' : 'False'}
+_expected_return = json.loads('''${expectedProvided ? JSON.stringify(testCase.expectedReturn) : 'null'}''') if _expected_set else None
+_expected_py_expr = ${expectedPy ? JSON.stringify(expectedPy) : 'None'}
+
+# Resolve function
+_target_fn = _ns.get(_fn_name)
+if _target_fn is None:
+    raise NameError(f"Function '{_fn_name}' not found")
+
+_result_value = _target_fn(*_args, **_kwargs)
+
+if _expected_py_expr is not None:
+    _expected_obj = eval(_expected_py_expr)
+else:
+    _expected_obj = _expected_return
+
+_function_passed = (_result_value == _expected_obj)
+`);
+
+                    const passed = Boolean(pyo.globals.get('_function_passed'));
+                    if (!passed) allPassed = false;
+
+                    // Convert result and expected to strings for reporting
+                    await pyo.runPythonAsync(`
+_result_str = str(_result_value)
+_expected_str = str(_expected_obj)
+`);
+                    const actualStr = pyo.globals.get('_result_str') || '';
+                    const expectedStr = pyo.globals.get('_expected_str') || '';
+
+                    results.push({
+                        testNumber: i + 1,
+                        input: { call: call },
+                        expected: expectedPy ? expectedPy : testCase.expectedReturn,
+                        actual: actualStr,
+                        passed: passed
+                    });
+                } else {
+                    throw new Error(`Unknown test mode: ${mode}`);
+                }
+
+                // Clean up
+                ['_stdout_buffer', '_stderr_buffer', '_sys_stdout', '_sys_stderr', '_out_text', '_err_text', '_test_inputs', '_input_index'].forEach(varName => {
+                    if (pyo.globals.has(varName)) {
+                        pyo.globals.delete(varName);
+                    }
+                });
+
+            } catch (error) {
+                allPassed = false;
+                results.push({
+                    testNumber: i + 1,
+                    input: Array.isArray(testCase.input) ? testCase.input : [testCase.input],
+                    expected: testCase.expected,
+                    actual: `Error: ${error.message}`,
+                    passed: false
+                });
+            }
+        }
+
+        // Generate test results message
+        let resultMessage = '';
+        if (allPassed) {
+            resultMessage = '✅ All tests passed!\n\n';
+        } else {
+            resultMessage = '❌ Some tests failed:\n\n';
+        }
+
+        // Add detailed test results: hide passed test details, show only failures
+        const failed = results.filter(r => !r.passed);
+        const passedCount = results.length - failed.length;
+        if (failed.length === 0) {
+            resultMessage += `All ${results.length} tests passed.\n`;
+        } else {
+            resultMessage += `${passedCount} passed, ${failed.length} failed.\n\n`;
+            failed.forEach(result => {
+                resultMessage += `Test ${result.testNumber}: ❌ FAIL\n`;
+            resultMessage += `  Input: ${JSON.stringify(result.input)}\n`;
+            resultMessage += `  Expected: "${result.expected}"\n`;
+            resultMessage += `  Got: "${result.actual}"\n`;
+                if (result.fullOutput) {
+                resultMessage += `  Full Output: ${result.fullOutput.replace(/\n/g, '\\n')}\n`;
+            }
+            resultMessage += '\n';
+        });
+        }
+
+        // Update progress and UI
+        const status = allPassed ? 'correct' : 'incorrect';
+        answeredMap.set(`${currentTopicIndex}-${currentQuestionIndex}`, { 
+            status: status,
+            topic: item.topic,
+            answer: code,
+            correctAnswer: allPassed ? 'All tests passed' : 'Check expected vs actual output'
+        });
+
+        setOutputs({ 
+            message: resultMessage, 
+            status: allPassed ? 'success' : 'error' 
+        });
+
+        updateTopicProgress();
+        renderQuestionNav();
+        checkTopicCompletion();
+
+        // Make editor read-only after submission
+        if (codeMirrorEditor) {
+            codeMirrorEditor.setOption('readOnly', true);
+        }
+
+    } catch (err) {
+        console.error('Error in submitCurrentCode:', err);
+        
+        let errorMessage = '❌ Submission failed: ';
+        if (err.message.includes('SyntaxError')) {
+            errorMessage += 'Check your Python syntax';
+        } else {
+            errorMessage += err.message;
+        }
+
+        setOutputs({ message: errorMessage, status: 'error' });
+        
+        answeredMap.set(`${currentTopicIndex}-${currentQuestionIndex}`, { 
+            status: 'incorrect', 
+            topic: item.topic,
+            answer: code,
+            correctAnswer: 'Fix the errors in your code'
+        });
+        
+        updateTopicProgress();
+        renderQuestionNav();
+        checkTopicCompletion();
+    } finally {
+        runBtn.disabled = false;
+        submitBtn.disabled = false;
+    }
+}
+
+
+// ----------------------
+// Progress tracking
+// ----------------------
+function updateTopicProgress() {
+    if (!currentModuleData || !currentModuleData.topics[currentTopicIndex]) return;
+
+    const topic = currentModuleData.topics[currentTopicIndex];
+    const progress = topicProgress.get(topic.name);
+    let completed = 0;
+    let correct = 0;
+
+    linearItems.forEach((item, idx) => {
+        const answer = answeredMap.get(`${currentTopicIndex}-${idx}`);
+        if (answer) {
+            completed++;
+            if (answer.status === 'correct') correct++;
+        }
+    });
+
+    progress.completed = completed;
+    progress.correct = correct;
+
+}
+
+function checkTopicCompletion() {
+    if (!currentModuleData || !currentModuleData.topics[currentTopicIndex]) return;
+
+    const topic = currentModuleData.topics[currentTopicIndex];
+    const progress = topicProgress.get(topic.name);
+
+    if (progress.completed === progress.total) {
+        finishTopicAssessment();
+    }
+}
+
+function checkAllTopicsCompleted() {
+    if (!currentModuleData || !currentModuleData.topics) return false;
+
+    return currentModuleData.topics.every(topic => {
+        const progress = topicProgress.get(topic.name);
+        return progress.completed === progress.total;
+    });
+}
+
+
+function setOutputs(payload = {}) {
+    const feedbackEl = document.getElementById('codeFeedback');
+    const feedbackTextEl = document.getElementById('codeFeedbackText');
+
+    if (!payload.message) {
+        feedbackEl.style.display = 'none';
+        return;
+    }
+
+    feedbackEl.style.display = 'block';
+    feedbackTextEl.textContent = payload.message;
+
+    // Remove existing classes
+    feedbackEl.classList.remove('success', 'error', 'info');
+
+    // Add appropriate class based on status
+    if (payload.status === 'success') {
+        feedbackEl.classList.add('success');
+    } else if (payload.status === 'error') {
+        feedbackEl.classList.add('error');
+    } else {
+        feedbackEl.classList.add('info');
+    }
+}
+function htmlToElement(html) {
+    const template = document.createElement('template');
+    template.innerHTML = html.trim();
+    return template.content.firstChild;
+}
+
+function deepEqual(a, b) {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (typeof a !== typeof b) return false;
+    if (typeof a !== 'object') return false;
+
+    if (Array.isArray(a) !== Array.isArray(b)) return false;
+    if (Array.isArray(a)) {
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) {
+            if (!deepEqual(a[i], b[i])) return false;
+        }
+        return true;
+    }
+
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) return false;
+
+    for (const key of keysA) {
+        if (!keysB.includes(key)) return false;
+        if (!deepEqual(a[key], b[key])) return false;
+    }
+    return true;
+}
+
+function escapeForPre(text) {
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+
+function setupEventListeners() {
+    letsBeginBtn.addEventListener('click', showTopicSelection);
+    mcqSubmitBtn.addEventListener('click', submitCurrentMcq);
+    runBtn.addEventListener('click', runCurrentCode);
+    submitBtn.addEventListener('click', submitCurrentCode);
+    finishBtn.addEventListener('click', finishTopicAssessment);
+}
+
+
+function showTopicSelection() {
+    // Hide welcome pane and show topic selection pane
+    document.getElementById('welcomePane').style.display = 'none';
+    document.getElementById('topicSelectionPane').style.display = 'block';
+}
+
+function submitCurrentMcq() {
+    const item = linearItems[currentQuestionIndex];
+    if (item.type !== "mcq") return;
+
+    const selected = document.querySelector(
+        `input[name="mcq_${currentTopicIndex}_${currentQuestionIndex}"]:checked`
+    );
+
+    if (!selected) {
+        alert("Please select an option.");
+        return;
+    }
+
+    // Check correctness
+    const isCorrect = parseInt(selected.value) === item.data.answer;
+    answeredMap.set(`${currentTopicIndex}-${currentQuestionIndex}`, {
+        status: isCorrect ? "correct" : "incorrect",
+        topic: item.topic,
+        answer: selected.value,
+        correctAnswer: item.data.answer
+    });
+
+    updateTopicProgress();
+    renderQuestionNav();
+    checkTopicCompletion();
+
+    // Move to next question if available
+    if (currentQuestionIndex < linearItems.length - 1) {
+        currentQuestionIndex++;
+        renderCurrentItem();
+    }
+}
+
+function finishTopicAssessment() {
+    const confirmFinish = confirm('Are you sure you want to finish this topic?');
+    if (!confirmFinish) return;
+
+    document.getElementById('assessmentArea').style.display = 'none';
+
+    const topic = currentModuleData.topics[currentTopicIndex];
+
+    // Mark all unanswered questions as "unanswered"
+    linearItems.forEach((item, idx) => {
+        const key = `${currentTopicIndex}-${idx}`;
+        if (!answeredMap.has(key)) {
+            answeredMap.set(key, {
+                status: 'unanswered',
+                topic: item.topic,
+                answer: 'Unanswered',
+                correctAnswer: item.type === 'mcq'
+                    ? item.data.options[item.data.answer]
+                    : 'Function that passes all test cases'
+            });
+        }
+    });
+
+    // Mark topic completed in localStorage
+    markTopicCompleted(topic.name);
+
+    // Update topic progress
+    updateTopicProgress();
+
+    // Persist per-topic score in localStorage for overall results
+    try {
+        const topic = currentModuleData.topics[currentTopicIndex];
+        const progress = topicProgress.get(topic.name);
+        const stored = JSON.parse(localStorage.getItem('topicScores') || '{}');
+        stored[topic.name] = { correct: progress.correct, total: progress.total };
+        localStorage.setItem('topicScores', JSON.stringify(stored));
+    } catch (e) {
+        console.warn('Unable to persist topic scores:', e);
+    }
+
+    // Show topic report with all answers
+    showTopicReport(true); // pass true to indicate "finished by student"
+}
+
+function markTopicCompleted(topicName) {
+    const completedTopics = JSON.parse(localStorage.getItem('completedTopics') || '[]');
+    if (!completedTopics.includes(topicName)) {
+        completedTopics.push(topicName);
+        localStorage.setItem('completedTopics', JSON.stringify(completedTopics));
+    }
+}
+
+function showTopicReport(showAnswers = true) {
+    const topic = currentModuleData.topics[currentTopicIndex];
+    const progress = topicProgress.get(topic.name);
+
+    // Hide question container
+    questionContainer.style.display = 'none';
+
+    // Show report view
+    topicReportView.style.display = 'block';
+    topicReportView.scrollIntoView({ behavior: 'smooth' }); // scroll to top
+
+    const header = topicReportView.querySelector('#topicReportHeader');
+    header.textContent = `${topic.name} - Topic Complete!`;
+
+    const content = topicReportView.querySelector('#topicReportContent');
+    content.innerHTML = `
+        <div class="report-summary">
+            <h3>Topic Performance: ${progress.correct}/${progress.total} Correct</h3>
+            <p>Score: ${Math.round((progress.correct / progress.total) * 100)}%</p>
+        </div>
+        <div class="topic-report">
+            <h4>Question Results</h4>
+            ${generateTopicQuestionResults(showAnswers)}
+        </div>
+    `;
+
+    // Enable Back / Next buttons
+    const backBtn = topicReportView.querySelector('#backToTopicsBtn');
+    backBtn.onclick = () => {
+        topicReportView.style.display = 'none';
+        document.getElementById('topicSelectionPane').style.display = 'block';
+        disableCompletedTopics();
+    };
+
+    const continueBtn = topicReportView.querySelector('#continueToNextTopicBtn');
+    continueBtn.onclick = () => {
+        topicReportView.style.display = 'none';
+        const nextIndex = currentTopicIndex + 1;
+        if (nextIndex < currentModuleData.topics.length) {
+            switchToTopic(nextIndex);
+        } else {
+            alert('No more topics left!');
+            document.getElementById('topicSelectionPane').style.display = 'block';
+        }
+    };
+
+    // Show overall results button if all topics are completed
+    const overallBtn = topicReportView.querySelector('#showOverallResultsBtn');
+    if (overallBtn) {
+        if (checkAllTopicsCompleted()) {
+            overallBtn.style.display = '';
+            overallBtn.onclick = () => {
+                topicReportView.style.display = 'none';
+                showOverallResults();
+            };
+        } else {
+            overallBtn.style.display = 'none';
+            overallBtn.onclick = null;
+        }
+    }
+}
+
+function generateTopicQuestionResults(showAnswers = true) {
+
+    let html = '';
+    linearItems.forEach((item, idx) => {
+
+        const answer = answeredMap.get(`${currentTopicIndex}-${idx}`) || {
+            status: 'unanswered',
+            topic: item.topic,
+            answer: 'Unanswered',
+            correctAnswer: item.type === 'mcq'
+                ? item.data.options[item.data.answer]
+                : 'Function that passes all test cases'
+        };
+
+        // Ensure we show the question text with the same renderer used for MCQs/code prompts
+        const questionRaw = item.type === 'mcq' ? item.data.question : (item.data.question || item.data.title || 'Coding Task');
+        const questionText = renderQuestionText(questionRaw);
+        const statusClass = answer.status === 'correct' ? 'correct'
+            : answer.status === 'incorrect' ? 'incorrect'
+                : 'unanswered';
+        const statusText = answer.status === 'correct' ? 'Correct'
+            : answer.status === 'incorrect' ? 'Incorrect'
+                : 'Unanswered';
+
+        html += `<div class="question-result ${item.type === 'code' ? 'code-task' : ''}">
+                    <div class="question-text">${questionText}</div>
+                    
+                    <span class="result-status ${statusClass}">${statusText}</span>`;
+
+        if (showAnswers) {
+            if (item.type === 'mcq') {
+                const correctOption = escapeHtml(item.data.options[item.data.answer]);
+                const studentAnswer = escapeHtml(item.data.options[answer.answer] || answer.answer);
+                html += `<div class="answers-wrapper">
+                    <div style="font-size:15px"><strong>Your Answer:</strong> ${studentAnswer}</div>
+                    <div style="font-size:15px"><strong>Correct Answer:</strong> ${correctOption}</div>
+                 </div>`;
+            } else {
+                // Show correct solution code if available; otherwise show expected summary from tests
+                const testCases = item.data.testCases || [];
+                let expectedSummary = '';
+                if (testCases.length) {
+                    expectedSummary = testCases.map((tc, i) => {
+                        const mode = tc.mode || (tc.call ? 'function' : 'io');
+                        if (mode === 'io') {
+                            const inputs = Array.isArray(tc.input) ? tc.input : [tc.input];
+                            return `Test ${i+1}: input=${escapeForPre(inputs.join(', '))} → ${escapeForPre(tc.expected)}`;
+                        } else {
+                            const call = tc.call || {};
+                            const argList = Array.isArray(call.args)?call.args.map(a=>String(a)).join(', '):'';
+                            const callStr = `${call.name || 'function'}(${argList})`;
+                            const expectedStr = tc.expectedPy ? tc.expectedPy : String(tc.expectedReturn);
+                            return `Test ${i+1}: ${escapeForPre(callStr)} → ${escapeForPre(expectedStr)}`;
+                        }
+                    }).join('\n');
+                } else {
+                    expectedSummary = 'Function that passes all test cases';
+                }
+
+                const solutionBlock = item.data.solutionCode
+                    ? `<div style="margin-top:6px"><strong>Correct Code:</strong></div><pre>${escapeForPre(item.data.solutionCode)}</pre>`
+                    : `<div style=\"margin-top:6px\"><strong>Expected (passes these tests):</strong></div><pre>${escapeForPre(expectedSummary)}</pre>`;
+
+                html += `<div class="answers-wrapper">
+                    <div style="font-size:15px"><strong>Your Code:</strong></div>
+                    <pre>${escapeForPre(answer.answer)}</pre>
+                    ${solutionBlock}
+                 </div>`;
+            }
+        }
+
+        html += `</div>`;
+    });
+    return html;
+}
+
+// Disable completed topics
+function disableCompletedTopics() {
+    const completedTopics = JSON.parse(localStorage.getItem('completedTopics') || '[]');
+    currentModuleData.topics.forEach((topic, index) => {
+        const isCompleted = completedTopics.includes(topic.name);
+        if (isCompleted) {
+            const btn = topicSelectionGrid.children[index];
+            btn.disabled = true;
+            btn.classList.add('completed');
+        }
+    });
+
+    // Also update the top-level results button visibility when returning
+    const showOverallTop = document.getElementById('showOverallResultsBtnTop');
+    if (showOverallTop) {
+        if (completedTopics.length && currentModuleData.topics && completedTopics.length === currentModuleData.topics.length) {
+            showOverallTop.style.display = '';
+            showOverallTop.onclick = () => {
+                document.getElementById('topicSelectionPane').style.display = 'none';
+                showOverallResults();
+            };
+        } else {
+            showOverallTop.style.display = 'none';
+            showOverallTop.onclick = null;
+        }
+    }
+}
+
+
+function generateCorrectAnswers() {
+    let html = '';
+    linearItems.forEach((item, idx) => {
+        const answer = answeredMap.get(`${currentTopicIndex}-${idx}`);
+        if (answer) {
+            const questionText = item.type === 'mcq' ? item.data.question : item.data.title;
+
+            if (item.type === 'mcq') {
+                const correctOption = item.data.options[item.data.answer];
+                html += `
+                    <div class="question-result">
+                        <span>${questionText}</span>
+                        <div style="text-align: right;">
+                            <div><strong>Your Answer:</strong> ${answer.answer}</div>
+                            <div><strong>Correct Answer:</strong> ${correctOption}</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="question-result">
+                        <span>${questionText}</span>
+                        <div style="text-align: right;">
+                            <div><strong>Your Code:</strong> Submitted</div>
+                            <div><strong>Expected:</strong> Function that passes all test cases</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    });
+    return html;
+}
+
+// ----------------------
+// Boot
+// ----------------------
+async function boot() {
+    await loadModuleIntoUI();
+    setupEditor();
+    setupEventListeners();
+}
+
+// Start
+boot();
+
+// ----------------------
+// Overall Results (Chart)
+// ----------------------
+function showOverallResults() {
+    // Hide other views
+    const sel = document.getElementById('topicSelectionPane');
+    if (sel) sel.style.display = 'none';
+    const assess = document.getElementById('assessmentArea');
+    if (assess) assess.style.display = 'none';
+    const view = document.getElementById('overallResultsView');
+    view.style.display = 'block';
+
+    // Build data from persisted scores in localStorage; fallback to in-memory progress
+    const labels = [];
+    const scores = [];
+    const rows = [];
+    let totalQuestions = 0;
+    let totalCorrect = 0;
+    const stored = JSON.parse(localStorage.getItem('topicScores') || '{}');
+    currentModuleData.topics.forEach(t => {
+        labels.push(t.name);
+        const saved = stored[t.name];
+        let pct = 0;
+        if (saved && typeof saved.correct === 'number' && typeof saved.total === 'number' && saved.total > 0) {
+            pct = Math.round((saved.correct / saved.total) * 100);
+            totalQuestions += saved.total; totalCorrect += saved.correct;
+            rows.push({ topic: t.name, correct: saved.correct, total: saved.total, score: pct });
+        } else {
+            const prog = topicProgress.get(t.name);
+            if (prog && prog.total > 0) pct = Math.round((prog.correct / prog.total) * 100);
+            if (prog) { totalQuestions += prog.total; totalCorrect += prog.correct; rows.push({ topic: t.name, correct: prog.correct, total: prog.total, score: pct }); }
+        }
+        scores.push(pct);
+    });
+
+    // Render chart via Chart.js
+    const canvas = document.getElementById('overallChart');
+    const ctx = canvas.getContext('2d');
+    if (window.__overallChart) {
+        window.__overallChart.destroy();
+    }
+    window.__overallChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Score (%)',
+                data: scores,
+                backgroundColor: 'rgba(52, 211, 153, 0.6)',
+                borderColor: 'rgba(22, 163, 74, 1)',
+                borderWidth: 1,
+                borderRadius: 6,
+                hoverBackgroundColor: 'rgba(22, 163, 74, 0.8)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: (v) => `${v}%`
+                    },
+                    grid: { color: 'rgba(148, 163, 184, 0.2)' }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: {
+                        autoSkip: false,
+                        font: { size: 12 }
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.parsed.y}%`
+                    }
+                }
+            }
+        }
+    });
+
+    // Update summary metrics and table
+    const topicsCount = currentModuleData.topics.length;
+    const overallPct = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+    const sub = document.getElementById('overallSubheading');
+    if (sub) sub.textContent = `Performance overview across ${topicsCount} topics`;
+    const mTop = document.getElementById('metricTopics'); if (mTop) mTop.textContent = String(topicsCount);
+    const mQ = document.getElementById('metricQuestions'); if (mQ) mQ.textContent = String(totalQuestions);
+    const mC = document.getElementById('metricCorrect'); if (mC) mC.textContent = String(totalCorrect);
+    const mS = document.getElementById('metricScore'); if (mS) mS.textContent = `${overallPct}%`;
+
+    const tbody = document.querySelector('#overallTable tbody');
+    if (tbody) {
+        tbody.innerHTML = '';
+        rows.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${escapeHtml(r.topic)}</td><td>${r.correct}</td><td>${r.total}</td><td>${r.score}%</td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Back button
+    const backBtn = document.getElementById('backFromOverallBtn');
+    if (backBtn) {
+        backBtn.onclick = () => {
+            view.style.display = 'none';
+            const tsp = document.getElementById('topicSelectionPane');
+            if (tsp) tsp.style.display = 'block';
+            disableCompletedTopics();
+        };
+    }
+
+    // PDF download button
+    const downloadBtn = document.getElementById('downloadPdfBtn');
+    if (downloadBtn) {
+        downloadBtn.onclick = async () => {
+            await downloadOverallResultsPdf({ labels, scores });
+        };
+    }
+
+    // Email teacher button
+    const emailBtn = document.getElementById('emailTeacherBtn');
+    if (emailBtn) {
+        emailBtn.onclick = async () => {
+            await emailOverallResultsToTeacher({ labels, scores });
+        };
+    }
+}
+
+// Generate a simple PDF (client-side) containing chart snapshot and watermark
+async function downloadOverallResultsPdf({ labels, scores }) {
+    try {
+        // Lazy load jsPDF from CDN
+        if (!window.jspdf) {
+            await new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                s.onload = resolve;
+                s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+
+        // Watermark image (logo.png) at center
+        const img = new Image();
+        img.src = 'assets/logo.png';
+        await new Promise(res => { img.onload = res; img.onerror = res; });
+
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
+        const wmW = Math.min(200, pageW * 0.3);
+        const wmH = img.naturalHeight ? (img.naturalHeight * wmW / img.naturalWidth) : wmW;
+        doc.addImage(img, 'PNG', (pageW - wmW) / 2, (pageH - wmH) / 2, wmW, wmH, undefined, 'FAST');
+        doc.setGState(new doc.GState({ opacity: 0.15 }));
+
+        // Header
+        doc.setGState(new doc.GState({ opacity: 1 }));
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(20);
+        doc.text('Overall Results', 40, 50);
+        doc.setDrawColor(200);
+        doc.line(40, 58, pageW - 40, 58);
+
+        // Add chart snapshot from canvas
+        const canvas = document.getElementById('overallChart');
+        const dataUrl = canvas.toDataURL('image/png');
+        const chartW = pageW - 80;
+        const chartH = chartW * (canvas.height / canvas.width);
+        doc.addImage(dataUrl, 'PNG', 40, 80, chartW, chartH, undefined, 'FAST');
+
+        // Summary and table of scores
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(12);
+        let y = 100 + chartH;
+        y += 10;
+        const totalTopics = labels.length;
+        const avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : 0;
+        doc.text(`Topics: ${totalTopics}   Average Score: ${avg}%`, 40, y);
+        y += 16;
+        doc.setFont('helvetica', 'bold');
+        doc.text('Topic', 40, y); doc.text('Score', pageW - 120, y);
+        y += 12; doc.setFont('helvetica', 'normal');
+        labels.forEach((label, i) => {
+            doc.text(label, 40, y);
+            doc.text(`${scores[i]}%`, pageW - 120, y);
+            y += 14;
+        });
+
+        doc.save('overall-results.pdf');
+    } catch (err) {
+        alert('Failed to generate PDF: ' + err.message);
+    }
+}
+
+// Email the same PDF via a webhook endpoint (needs server to relay email)
+async function emailOverallResultsToTeacher({ labels, scores }) {
+    try {
+        // Build PDF blob by reusing generation
+        if (!window.jspdf) {
+            await new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                s.onload = resolve;
+                s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+
+        const img = new Image();
+        img.src = 'assets/logo.png';
+        await new Promise(res => { img.onload = res; img.onerror = res; });
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
+        const wmW = Math.min(200, pageW * 0.3);
+        const wmH = img.naturalHeight ? (img.naturalHeight * wmW / img.naturalWidth) : wmW;
+        doc.addImage(img, 'PNG', (pageW - wmW) / 2, (pageH - wmH) / 2, wmW, wmH, undefined, 'FAST');
+        doc.setGState(new doc.GState({ opacity: 0.15 }));
+        doc.setGState(new doc.GState({ opacity: 1 }));
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.text('Overall Results', 40, 50);
+        const canvas = document.getElementById('overallChart');
+        const dataUrl = canvas.toDataURL('image/png');
+        const chartW = pageW - 80;
+        const chartH = chartW * (canvas.height / canvas.width);
+        doc.addImage(dataUrl, 'PNG', 40, 80, chartW, chartH, undefined, 'FAST');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(12);
+        let y = 100 + chartH;
+        y += 20;
+        labels.forEach((label, i) => {
+            doc.text(`${label}: ${scores[i]}%`, 40, y);
+            y += 18;
+        });
+
+        const pdfBlob = doc.output('blob');
+
+        // Send via EmailJS (configure your keys)
+        if (!window.emailjs) throw new Error('EmailJS not loaded');
+        if (!window.__emailjs_initialized) {
+            // TODO: Replace with your EmailJS public key
+            emailjs.init({ publicKey: 'YOUR_EMAILJS_PUBLIC_KEY' });
+            window.__emailjs_initialized = true;
+        }
+
+        // Convert blob to base64
+        const base64pdf = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            reader.readAsDataURL(pdfBlob);
+        });
+
+        // TODO: Replace serviceId/templateId and params
+        const serviceId = 'YOUR_EMAILJS_SERVICE_ID';
+        const templateId = 'YOUR_EMAILJS_TEMPLATE_ID';
+        const params = {
+            teacher_email: 'teacher@example.com',
+            subject: 'Student Assessment Results',
+            message: 'Attached is the overall results PDF.',
+            attachment: base64pdf,
+            filename: 'overall-results.pdf'
+        };
+        await emailjs.send(serviceId, templateId, params);
+        alert('Results emailed to teacher.');
+    } catch (err) {
+        alert('Failed to email results: ' + err.message + '\nPlease configure the backend endpoint.');
+    }
+}

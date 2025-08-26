@@ -1,0 +1,768 @@
+{
+  "moduleName": "Module 1",
+  "topics": [
+    {
+      "name": "Introduction + Basics",
+      "description": "Basic Python concepts, variables, data types, input and comments",
+      "mcqs": [
+        {
+          "question": "What is the data type of the following variable?\n\ni='Hello'",
+          "options": [
+            "int",
+            "str",
+            "float",
+            "dict"
+          ],
+          "answer": 1,
+          "explanation": "i is a string because it's enclosed in quotes.",
+          "topic": "Introduction + Basics"
+        },
+        {
+          "question": "What is the output of the following code?\n\nx = 42\nprint(type(x))",
+          "options": [
+            "<class 'int'>",
+            "<class 'float'>",
+            "<class 'str'>",
+            "<class 'bool'>"
+          ],
+          "answer": 0,
+          "explanation": "42 is an integer, so type(x) returns <class 'int'>.",
+          "topic": "Introduction + Basics"
+        },
+        {
+          "question": "What is the purpose of the input() function in Python?",
+          "options": [
+            "To print values on the screen",
+            "To accept user input",
+            "To convert data types",
+            "To declare a variable"
+          ],
+          "answer": 1,
+          "explanation": "input() is used to get user input from the console.",
+          "topic": "Introduction + Basics"
+        },
+        {
+          "question": "Which of the following statements is used to write a comment in Python?",
+          "options": [
+            "// This is a comment",
+            "<!-- This is a comment -->",
+            "# This is a comment",
+            "/* This is a comment */"
+          ],
+          "answer": 2,
+          "explanation": "Python uses # to write single-line comments.",
+          "topic": "Introduction + Basics"
+        }
+      ],
+      "codeTasks": [
+        {
+          "question": "Write a program that asks the user for their name and age, then prints a greeting like 'Hello <name>, you are <age> years old.'",
+          "starterCode": "# Your code here",
+          "expectedOutput": "Hello Alice, you are 20 years old.",
+          "solutionCode": "name = input('Enter name')\nage = input('Enter age')\nprint(f'Hello {name}, you are {age} years old.')",
+          "testCases": [
+            { "mode": "io", "input": ["Alice", 20], "expected": "Hello Alice, you are 20 years old." },
+            { "mode": "io", "input": ["Bob", 35], "expected": "Hello Bob, you are 35 years old." }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Arithmetic Operators",
+      "description": "Python arithmetic operations and operator usage",
+      "mcqs": [
+        {
+          "question": "What is the result of the following code?\nprint(10 / 3)",
+          "options": [
+            "3",
+            "3.3333333333333335",
+            "3.0",
+            "Error"
+          ],
+          "answer": 1,
+          "explanation": "Division of integers in Python returns a float.",
+          "topic": "Arithmetic Operators"
+        },
+        {
+          "question": "What will the following code output?\nprint(7 % 2)",
+          "options": [
+            "1",
+            "2",
+            "0",
+            "3"
+          ],
+          "answer": 0,
+          "explanation": "The modulo operator % returns the remainder of division.",
+          "topic": "Arithmetic Operators"
+        },
+        {
+          "question": "Which operator is used to raise a number to the power of another number?",
+          "options": [
+            "^",
+            "*",
+            "**",
+            "//"
+          ],
+          "answer": 2,
+          "explanation": "The ** operator is used for exponentiation in Python.",
+          "topic": "Arithmetic Operators"
+        }
+      ],
+      "codeTasks": [
+        {
+          "question": "Write a function `sum_of_squares(n)` that returns the sum of squares of numbers from 1 to n.",
+          "starterCode": "def sum_of_squares(n):\n    # Your code here\n    pass",
+          "expectedOutput": "sum_of_squares(3) → 14",
+          "solutionCode": "def sum_of_squares(n):\n    return sum(i*i for i in range(1, n+1))",
+          "testCases": [
+            { "mode": "function", "call": { "name": "sum_of_squares", "args": [3] }, "expectedReturn": 14 },
+            { "mode": "function", "call": { "name": "sum_of_squares", "args": [1] }, "expectedReturn": 1 },
+            { "mode": "function", "call": { "name": "sum_of_squares", "args": [5] }, "expectedReturn": 55 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Relational Operators + Conditional Programming",
+      "description": "Comparisons and conditional statements",
+      "mcqs": [
+        {
+          "question": "Which of the following is a relational operator?",
+          "options": [
+            "and",
+            ">=",
+            "+",
+            "or"
+          ],
+          "answer": 1,
+          "explanation": ">= is a relational operator; and/or are logical operators.",
+          "topic": "Relational Operators + Conditional Programming"
+        },
+        {
+          "question": "What is the result of this code?\nx = 10\ny = 5\nprint(x > y)",
+          "options": [
+            "True",
+            "False",
+            "None",
+            "Error"
+          ],
+          "answer": 0,
+          "explanation": "10 is greater than 5, so it prints True.",
+          "topic": "Relational Operators + Conditional Programming"
+        },
+        {
+          "question": "Which relational operator checks if two values are equal?",
+          "options": [
+            "==",
+            "!=",
+            ">",
+            "<"
+          ],
+          "answer": 0,
+          "explanation": "== checks equality between two values.",
+          "topic": "Relational Operators + Conditional Programming"
+        },
+        {
+          "question": "What is the output of the following code?\nx = 3\ny = 4\nif x == 3:\n    print(\"Equal\")\nelse:\n    print(\"Not equal\")",
+          "options": [
+            "Equal",
+            "Not equal",
+            "None",
+            "Error"
+          ],
+          "answer": 0,
+          "explanation": "x is 3, so the if condition is True and 'Equal' is printed.",
+          "topic": "Relational Operators + Conditional Programming"
+        }
+      ],
+      "codeTasks": [
+        {
+          "question": "Write a program that asks the user for a number and prints whether it is positive, negative, or zero.",
+          "starterCode": "num = int(input('Enter a number: '))\n# Your code here",
+          "expectedOutput": "Enter a number: 5 → Positive",
+          "solutionCode": "num = int(input('Enter a number: '))\nif num > 0:\n    print('Positive')\nelif num < 0:\n    print('Negative')\nelse:\n    print('Zero')",
+          "testCases": [
+            { "mode": "io", "input": [5], "expected": "Positive" },
+            { "mode": "io", "input": [-1], "expected": "Negative" },
+            { "mode": "io", "input": [0], "expected": "Zero" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Logical Operators + Conditional Programming",
+      "description": "Logical operators and their usage",
+      "mcqs": [
+        {
+          "question": "What will be the output of the following code?\nx = True\ny = False\nprint(x and y)",
+          "options": [
+            "True",
+            "False",
+            "None",
+            "Error"
+          ],
+          "answer": 1,
+          "explanation": "x and y returns True only if both are True.",
+          "topic": "Logical Operators + Conditional Programming"
+        },
+        {
+          "question": "What will be the output of the following code?\nx = True\ny = False\nprint(x or y)",
+          "options": [
+            "True",
+            "False",
+            "None",
+            "Error"
+          ],
+          "answer": 0,
+          "explanation": "x or y returns True if at least one operand is True.",
+          "topic": "Logical Operators + Conditional Programming"
+        },
+        {
+          "question": "What will the output be for the following code?\nx = 3\ny = 5\nprint(not (x < y))",
+          "options": [
+            "True",
+            "False",
+            "None",
+            "Error"
+          ],
+          "answer": 1,
+          "explanation": "x < y is True, not True is False.",
+          "topic": "Logical Operators + Conditional Programming"
+        },
+        {
+          "question": "Which of the following is not a logical operator in Python?",
+          "options": [
+            "and",
+            "or",
+            "not",
+            "=="
+          ],
+          "answer": 3,
+          "explanation": "== is a relational operator, not a logical operator.",
+          "topic": "Logical Operators + Conditional Programming"
+        }
+      ],
+      "codeTasks": [
+        {
+          "question": "Write a program that asks the user for two boolean values and prints True if both are True, otherwise prints False.",
+          "starterCode": "a = True  # Example input\nb = False # Example input\n# Your code here",
+          "expectedOutput": "True and False → False",
+          "solutionCode": "a = True\nb = False\nprint(a and b)",
+          "testCases": [
+            { "mode": "io", "input": [], "expected": "False" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Strings Formatting",
+      "description": "String formatting techniques in Python",
+      "mcqs": [
+        {
+          "question": "What is the output of the following code?\nname = \"Python\"\nprint(f\"Welcome to {name}!\")",
+          "options": [
+            "Welcome to Python!",
+            "Welcome to {name}!",
+            "Welcome to 'Python'!",
+            "Error"
+          ],
+          "answer": 0,
+          "explanation": "f-strings replace the placeholder with the variable value.",
+          "topic": "Strings Formatting"
+        },
+        {
+          "question": "Which of the following is a correct way to format a string in Python?",
+          "options": [
+            "\"Hello, {name}\".format(name=\"John\")",
+            "\"Hello, name\".format(name=\"John\")",
+            "\"Hello, {0}\".format(\"John\")",
+            "Both a and c"
+          ],
+          "answer": 3,
+          "explanation": "Both a and c are valid string formatting methods.",
+          "topic": "Strings Formatting"
+        },
+        {
+          "question": "What does the + operator do when used with strings?",
+          "options": [
+            "Adds them",
+            "Multiplies them",
+            "Concatenates them",
+            "Subtracts them"
+          ],
+          "answer": 2,
+          "explanation": "+ concatenates strings in Python.",
+          "topic": "Strings Formatting"
+        }
+      ],
+      "codeTasks": [
+        {
+          "question": "Write a program that asks the user for a first and last name and prints 'Your name is <last>, <first> <last>'.",
+          "starterCode": "first = input('First name: ')\nlast = input('Last name: ')\n# Your code here",
+          "expectedOutput": "First name: John, Last name: Doe → Your name is Doe, John Doe",
+          "solutionCode": "first = input('First name: ')\nlast = input('Last name: ')\nprint(f'Your name is {last}, {first} {last}')",
+          "testCases": [
+            { "mode": "io", "input": ["John", "Doe"], "expected": "Your name is Doe, John Doe" },
+            { "mode": "io", "input": ["Ada", "Lovelace"], "expected": "Your name is Lovelace, Ada Lovelace" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "String Methods",
+      "description": "Common string methods in Python",
+      "mcqs": [
+        {
+          "question": "What does the split() method do in Python?",
+          "options": [
+            "Joins a list of strings into a single string",
+            "Splits a string into a list of words",
+            "Reverses the string",
+            "Converts a string into uppercase"
+          ],
+          "answer": 1,
+          "explanation": "split() divides a string into a list based on a delimiter (space by default).",
+          "topic": "String Methods"
+        },
+        {
+          "question": "Which method is used to convert all characters of a string to uppercase?",
+          "options": [
+            "upper()",
+            "capitalize()",
+            "casefold()",
+            "lower()"
+          ],
+          "answer": 0,
+          "explanation": "upper() converts all letters in the string to uppercase.",
+          "topic": "String Methods"
+        },
+        {
+          "question": "What will the following code print?\ntext = \"Python Programming\"\nprint(text[7:12])",
+          "options": [
+            "Progr",
+            "Progrm",
+            "on Pr",
+            "n Pro"
+          ],
+          "answer": 0,
+          "explanation": "text[7:12] slices characters from index 7 up to 11.",
+          "topic": "String Methods"
+        }
+      ],
+      "codeTasks": [
+        {
+          "question": "Write a function `count_vowels(s)` that returns the number of vowels in the string s.",
+          "starterCode": "def count_vowels(s):\n    # Your code here\n    pass",
+          "expectedOutput": "count_vowels('Python') → 1",
+          "solutionCode": "def count_vowels(s):\n    return sum(1 for c in s.lower() if c in 'aeiou')",
+          "testCases": [
+            { "mode": "function", "call": { "name": "count_vowels", "args": ["Python"] }, "expectedReturn": 1 },
+            { "mode": "function", "call": { "name": "count_vowels", "args": ["aeiouAEIOU"] }, "expectedReturn": 10 },
+            { "mode": "function", "call": { "name": "count_vowels", "args": ["xyz"] }, "expectedReturn": 0 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Functions",
+      "description": "Defining and using functions in Python",
+      "mcqs": [
+        {
+          "question": "What will be the output of the following function?\ndef add(a, b=4):\n    return a + b\nprint(add(5))",
+          "options": [
+            "5",
+            "9",
+            "4",
+            "Error"
+          ],
+          "answer": 1,
+          "explanation": "b defaults to 4, so 5 + 4 = 9.",
+          "topic": "Functions"
+        },
+        {
+          "question": "Which of the following is the correct syntax for defining a function in Python?",
+          "options": [
+            "function func():",
+            "def func():",
+            "def: func()",
+            "func():"
+          ],
+          "answer": 1,
+          "explanation": "Python functions are defined using def keyword.",
+          "topic": "Functions"
+        }
+      ],
+      "codeTasks": [
+        {
+          "question": "Write a function `factorial(n)` that returns the factorial of n.",
+          "starterCode": "def factorial(n):\n    # Your code here\n    pass",
+          "expectedOutput": "factorial(5) → 120",
+          "solutionCode": "def factorial(n):\n    result = 1\n    for i in range(2, n+1):\n        result *= i\n    return result",
+          "testCases": [
+            { "mode": "function", "call": { "name": "factorial", "args": [5] }, "expectedReturn": 120 },
+            { "mode": "function", "call": { "name": "factorial", "args": [0] }, "expectedReturn": 1 },
+            { "mode": "function", "call": { "name": "factorial", "args": [1] }, "expectedReturn": 1 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Loops",
+      "description": "While and for loops in Python",
+      "mcqs": [
+        {
+          "question": "What is the output of the following code?\ni = 1\nwhile i < 4:\n    print(i, end=' ')\n    i += 1",
+          "options": [
+            "1 2 3",
+            "1 2 3 4",
+            "Error",
+            "1 2"
+          ],
+          "answer": 0,
+          "explanation": "The loop prints 1, 2, 3 before i reaches 4.",
+          "topic": "Loops"
+        },
+        {
+          "question": "What is the purpose of the continue statement in a loop?",
+          "options": [
+            "To terminate the loop",
+            "To skip the rest of the code for the current iteration",
+            "To move to the next loop after terminating the current one",
+            "To raise an error"
+          ],
+          "answer": 1,
+          "explanation": "continue skips the remaining statements in the current iteration and proceeds to the next iteration.",
+          "topic": "Loops"
+        },
+        {
+          "question": "How many times will the following loop run?\nfor i in range(1, 5):\n    print(i)",
+          "options": [
+            "5",
+            "3",
+            "4",
+            "6"
+          ],
+          "answer": 2,
+          "explanation": "range(1,5) generates 1,2,3,4 → 4 iterations.",
+          "topic": "Loops"
+        }
+      ],
+      "codeTasks": [
+        {
+          "question": "Write a program that prints all even numbers from 1 to 20 using a loop.",
+          "starterCode": "# Your code here",
+          "expectedOutput": "2 4 6 8 10 12 14 16 18 20",
+          "solutionCode": "print(' '.join(str(i) for i in range(2, 21, 2)))",
+          "testCases": [
+            { "mode": "io", "input": [], "expected": "2 4 6 8 10 12 14 16 18 20" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Lists",
+      "description": "Working with Python lists",
+      "mcqs": [
+        {
+          "question": "What will be the output of the following code?\nnumbers = [45, 15, 35]\nnumbers.append([5, 2])\nprint(numbers)",
+          "options": [
+            "[45, 15, 35, 5, 2]",
+            "[35, 15, 45]",
+            "[45, 15, 35]",
+            "Error"
+          ],
+          "answer": 0,
+          "explanation": "append adds the argument as a single element; list becomes nested.",
+          "topic": "Lists"
+        }
+      ],
+      "codeTasks": [
+        {
+          "question": "Write a function `average(lst)` that returns the average of numbers in a list.",
+          "starterCode": "def average(lst):\n    # Your code here\n    pass",
+          "expectedOutput": "average([1, 2, 3, 4]) → 2.5",
+          "solutionCode": "def average(lst):\n    return (sum(lst) / len(lst)) if lst else 0",
+          "testCases": [
+            { "mode": "function", "call": { "name": "average", "args": [[1,2,3,4]] }, "expectedReturn": 2.5 },
+            { "mode": "function", "call": { "name": "average", "args": [[10,0]] }, "expectedReturn": 5 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tuples",
+      "description": "Working with Python tuples",
+      "mcqs": [
+        {
+          "question": "Can tuples contain different data types?",
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "answer": 0,
+          "explanation": "Tuples can contain elements of different types.",
+          "topic": "Tuples"
+        },
+        {
+          "question": "What is the difference between a list and a tuple?",
+          "options": [
+            "Lists are immutable and tuples are mutable",
+            "Lists can store values of different types and tuples can’t",
+            "Lists are mutable and tuples are immutable",
+            "Values can be accessed by their index in lists but not in tuples"
+          ],
+          "answer": 2,
+          "explanation": "Lists are mutable; tuples are immutable.",
+          "topic": "Tuples"
+        }
+      ],
+      "codeTasks": [
+        {
+          "question": "Write a function `max_in_tuple(t)` that returns the maximum element in a tuple.",
+          "starterCode": "def max_in_tuple(t):\n    # Your code here\n    pass",
+          "expectedOutput": "max_in_tuple((1, 5, 3)) → 5",
+          "solutionCode": "def max_in_tuple(t):\n    return max(t) if t else None",
+          "testCases": [
+            { "mode": "function", "call": { "name": "max_in_tuple", "args": [[1,5,3]] }, "expectedReturn": 5 },
+            { "mode": "function", "call": { "name": "max_in_tuple", "args": [[-2,-9,-1]] }, "expectedReturn": -1 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Dictionaries",
+      "description": "Working with Python dictionaries",
+      "mcqs": [
+        {
+          "question": "Keys in the dictionary are ______",
+          "options": [
+            "mutable",
+            "immutable"
+          ],
+          "answer": 1,
+          "explanation": "Dictionary keys must be immutable.",
+          "topic": "Dictionaries"
+        },
+        {
+          "question": "What is the result of the following code?\nfruit_count = {'apple': 1, 'orange': 2}\nfruit_count['orange'] = 3\nprint(fruit_count)",
+          "options": [
+            "{'apple': 1, 'orange': 2}",
+            "{'apple': 1, 'orange': 3}",
+            "{'apple': 1, 'orange': 5}",
+            "{'orange': 3, 'apple': 1}"
+          ],
+          "answer": 1,
+          "explanation": "The value of 'orange' key is updated to 3.",
+          "topic": "Dictionaries"
+        }
+      ],
+      "codeTasks": [
+        {
+          "question": "Write a function `get_value(d, key)` that returns the value for key in dictionary d, or 'Not found' if the key doesn't exist.",
+          "starterCode": "def get_value(d, key):\n    # Your code here\n    pass",
+          "expectedOutput": "get_value({'a':1}, 'b') → 'Not found'",
+          "solutionCode": "def get_value(d, key):\n    return d.get(key, 'Not found')",
+          "testCases": [
+            { "mode": "function", "call": { "name": "get_value", "args": [{"a":1}, "a"] }, "expectedReturn": 1 },
+            { "mode": "function", "call": { "name": "get_value", "args": [{"a":1}, "b"] }, "expectedReturn": "Not found" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sets",
+      "description": "Working with Python sets",
+      "mcqs": [
+        {
+          "question": "Can sets have duplicate elements?",
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "answer": 1,
+          "explanation": "Sets automatically remove duplicates.",
+          "topic": "Sets"
+        },
+        {
+          "question": "What will the following code output?\ns1 = {1, 2, 3}\ns2 = {3, 4, 5}\nprint(s1 & s2)",
+          "options": [
+            "{3}",
+            "{1, 2, 3, 4, 5}",
+            "{}",
+            "{1, 2}"
+          ],
+          "answer": 0,
+          "explanation": "& operator returns intersection of sets.",
+          "topic": "Sets"
+        }
+      ],
+      "codeTasks": [
+        {
+          "question": "Write a function `common_elements(s1, s2)` that returns a set of elements common to both sets.",
+          "starterCode": "def common_elements(s1, s2):\n    # Your code here\n    pass",
+          "expectedOutput": "common_elements({1,2,3}, {2,3,4}) → {2,3}",
+          "solutionCode": "def common_elements(s1, s2):\n    return set(s1) & set(s2)",
+          "testCases": [
+            { "mode": "function", "call": { "name": "common_elements", "args": [[1,2,3], [2,3,4]] }, "expectedPy": "{2,3}" },
+            { "mode": "function", "call": { "name": "common_elements", "args": [[1,1,1], [1]] }, "expectedPy": "{1}" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Iterating Through Iterables",
+      "description": "Loops and iteration over different Python iterables",
+      "mcqs": [
+        {
+          "question": "What will the following code output?\nnumbers = [10, 20, 30, 40]\nfor num in numbers:\n    print(num, end=\" \")",
+          "options": [
+            "10 20 30 40",
+            "40 30 20 10",
+            "40",
+            "Error"
+          ],
+          "answer": 0,
+          "explanation": "Iterates through the list in order.",
+          "topic": "Iterating Through Iterables"
+        },
+        {
+          "question": "What will this code print?\nmy_tuple = (1, 2, 3)\nfor val in my_tuple:\n    print(val * 2, end=\" \")",
+          "options": [
+            "2 4 6",
+            "1 2 3",
+            "2 3 4 5 6",
+            "Error"
+          ],
+          "answer": 0,
+          "explanation": "Each element is multiplied by 2.",
+          "topic": "Iterating Through Iterables"
+        },
+        {
+          "question": "What is the correct way to iterate through a dictionary?\nfruit_count = {\"apple\": 2, \"orange\": 3}\nfor key in fruit_count:\n    print(key, fruit_count[key])",
+          "options": [
+            "apple orange",
+            "apple 2 orange 3",
+            "apple: 2 orange: 3",
+            "Error"
+          ],
+          "answer": 1,
+          "explanation": "Iterating keys and accessing their values prints key-value pairs.",
+          "topic": "Iterating Through Iterables"
+        },
+        {
+          "question": "What will this code print?\nmy_set = {1, 2, 3}\nfor item in my_set:\n    print(item, end=\" \")",
+          "options": [
+            "1 2 3",
+            "3 2 1",
+            "Error",
+            "None"
+          ],
+          "answer": 0,
+          "explanation": "Sets are iterable; prints elements in arbitrary order (may vary).",
+          "topic": "Iterating Through Iterables"
+        },
+        {
+          "question": "Which of the following iterables cannot be used in a for loop?",
+          "options": [
+            "Lists",
+            "Tuples",
+            "Dictionaries",
+            "None of the above"
+          ],
+          "answer": 3,
+          "explanation": "All listed types are iterable; 'None of the above' is correct.",
+          "topic": "Iterating Through Iterables"
+        }
+      ],
+      "codeTasks": [
+        {
+          "question": "Write a program that iterates over a list of numbers and prints only the odd numbers.",
+          "starterCode": "numbers = [1,2,3,4,5]\n# Your code here",
+          "expectedOutput": "1 3 5",
+          "solutionCode": "numbers = [1,2,3,4,5]\nprint(' '.join(str(n) for n in numbers if n % 2 == 1))",
+          "testCases": [
+            { "mode": "io", "input": [], "expected": "1 3 5" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Membership Operators",
+      "description": "Using in and not in operators",
+      "mcqs": [
+        {
+          "question": "What will the following code output?\nmy_list = [1, 2, 3, 4]\nprint(5 in my_list)",
+          "options": [
+            "True",
+            "False",
+            "Error",
+            "None"
+          ],
+          "answer": 1,
+          "explanation": "5 is not in the list, so it returns False.",
+          "topic": "Membership Operators"
+        },
+        {
+          "question": "What does the not in operator do?",
+          "options": [
+            "Checks if an element exists in a sequence.",
+            "Removes an element from a sequence.",
+            "Checks if an element does not exist in a sequence.",
+            "None of the above."
+          ],
+          "answer": 2,
+          "explanation": "not in returns True if the element is absent in the sequence.",
+          "topic": "Membership Operators"
+        },
+        {
+          "question": "What will the output of this code be?\nmy_string = \"Python\"\nprint('y' in my_string)",
+          "options": [
+            "True",
+            "False",
+            "Error",
+            "None"
+          ],
+          "answer": 0,
+          "explanation": "'y' exists in 'Python', so it returns True.",
+          "topic": "Membership Operators"
+        },
+        {
+          "question": "What will this code print?\nmy_dict = {\"key1\": \"value1\", \"key2\": \"value2\"}\nprint(\"key1\" in my_dict)",
+          "options": [
+            "True",
+            "False",
+            "Error",
+            "None"
+          ],
+          "answer": 0,
+          "explanation": "Checking key existence in dictionary returns True.",
+          "topic": "Membership Operators"
+        },
+        {
+          "question": "What will be the result of the following expression?\nmy_set = {1, 2, 3}\nprint(4 not in my_set)",
+          "options": [
+            "True",
+            "False",
+            "Error",
+            "None"
+          ],
+          "answer": 0,
+          "explanation": "4 is not in the set, so it returns True.",
+          "topic": "Membership Operators"
+        }
+      ],
+      "codeTasks": [
+        {
+          "question": "Write a program that checks if a user-input number is in a predefined list of numbers and prints 'Found' or 'Not Found'.",
+          "starterCode": "numbers = [2,4,6,8]\nnum = int(input('Enter a number: '))\n# Your code here",
+          "expectedOutput": "Enter a number: 4 → Found",
+          "solutionCode": "numbers = [2,4,6,8]\nnum = int(input('Enter a number: '))\nprint('Found' if num in numbers else 'Not Found')",
+          "testCases": [
+            { "mode": "io", "input": [4], "expected": "Found" },
+            { "mode": "io", "input": [5], "expected": "Not Found" }
+          ]
+        }
+      ]
+    }
+  ]
+}
