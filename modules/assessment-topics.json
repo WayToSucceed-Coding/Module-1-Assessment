@@ -56,14 +56,37 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a program that asks the user for their name and age, then prints a greeting like 'Hello <name>, you are <age> years old.'",
+          "question": "Write a program that reads two integers and prints their sum and product in the format: 'Sum = X, Product = Y'.",
           "starterCode": "# Your code here",
-          "expectedOutput": "Hello Alice, you are 20 years old.",
-          "solutionCode": "name = input('Enter name')\nage = input('Enter age')\nprint(f'Hello {name}, you are {age} years old.')",
+          "expectedOutput": "If input is 4 and 5 → Output: Sum = 9, Product = 20",
+          "solutionCode": "a = int(input('Enter first number: '))\nb = int(input('Enter second number: '))\nprint('Sum =', a + b, ', Product =', a * b)",
           "testCases": [
-            { "mode": "io", "input": ["Alice", 20], "expected": "Hello Alice, you are 20 years old." },
-            { "mode": "io", "input": ["Bob", 35], "expected": "Hello Bob, you are 35 years old." }
-          ]
+            {
+              "mode": "io",
+              "input": [
+                "4",
+                "5"
+              ],
+              "expected": "Sum = 9, Product = 20"
+            },
+            {
+              "mode": "io",
+              "input": [
+                "7",
+                "3"
+              ],
+              "expected": "Sum = 10, Product = 21"
+            }
+          ],
+          "structureRequirements": {
+            "functions": [],
+            "mustUseForLoop": false,
+            "mustUseWhileLoop": false,
+            "forbidden": [
+              "eval(",
+              "exec("
+            ]
+          }
         }
       ]
     },
@@ -110,15 +133,37 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a function `sum_of_squares(n)` that returns the sum of squares of numbers from 1 to n.",
-          "starterCode": "def sum_of_squares(n):\n    # Your code here\n    pass",
-          "expectedOutput": "sum_of_squares(3) → 14",
-          "solutionCode": "def sum_of_squares(n):\n    return sum(i*i for i in range(1, n+1))",
+          "question": "Write a program that reads two integers and prints their sum and product in the format: 'Sum = X, Product = Y'.",
+          "starterCode": "# Your code here",
+          "expectedOutput": "If input is 4 and 5 → Output: Sum = 9, Product = 20",
+          "solutionCode": "a = int(input('Enter first number: '))\nb = int(input('Enter second number: '))\nprint('Sum =', a + b, ', Product =', a * b)",
           "testCases": [
-            { "mode": "function", "call": { "name": "sum_of_squares", "args": [3] }, "expectedReturn": 14 },
-            { "mode": "function", "call": { "name": "sum_of_squares", "args": [1] }, "expectedReturn": 1 },
-            { "mode": "function", "call": { "name": "sum_of_squares", "args": [5] }, "expectedReturn": 55 }
-          ]
+            {
+              "mode": "io",
+              "input": [
+                "4",
+                "5"
+              ],
+              "expected": "Sum = 9, Product = 20"
+            },
+            {
+              "mode": "io",
+              "input": [
+                "7",
+                "3"
+              ],
+              "expected": "Sum = 10, Product = 21"
+            }
+          ],
+          "structureRequirements": {
+            "functions": [],
+            "mustUseForLoop": false,
+            "mustUseWhileLoop": false,
+            "forbidden": [
+              "eval(",
+              "exec("
+            ]
+          }
         }
       ]
     },
@@ -178,14 +223,41 @@
       "codeTasks": [
         {
           "question": "Write a program that asks the user for a number and prints whether it is positive, negative, or zero.",
-          "starterCode": "num = int(input('Enter a number: '))\n# Your code here",
+          "starterCode": "# Your code here\n",
           "expectedOutput": "Enter a number: 5 → Positive",
           "solutionCode": "num = int(input('Enter a number: '))\nif num > 0:\n    print('Positive')\nelif num < 0:\n    print('Negative')\nelse:\n    print('Zero')",
           "testCases": [
-            { "mode": "io", "input": [5], "expected": "Positive" },
-            { "mode": "io", "input": [-1], "expected": "Negative" },
-            { "mode": "io", "input": [0], "expected": "Zero" }
-          ]
+            {
+              "mode": "io",
+              "input": [
+                5
+              ],
+              "expected": "Positive"
+            },
+            {
+              "mode": "io",
+              "input": [
+                -1
+              ],
+              "expected": "Negative"
+            },
+            {
+              "mode": "io",
+              "input": [
+                0
+              ],
+              "expected": "Zero"
+            }
+          ],
+          "structureRequirements": {
+            "functions": [],
+            "mustUseForLoop": false,
+            "mustUseWhileLoop": false,
+            "forbidden": [
+              "eval(",
+              "exec("
+            ]
+          }
         }
       ]
     },
@@ -244,18 +316,54 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a program that asks the user for two boolean values and prints True if both are True, otherwise prints False.",
-          "starterCode": "a = True  # Example input\nb = False # Example input\n# Your code here",
-          "expectedOutput": "True and False → False",
-          "solutionCode": "a = True\nb = False\nprint(a and b)",
+          "question": "The program asks the user for a number. Print 'Fizz' if it is divisible by 3, 'Buzz' if divisible by 5, 'FizzBuzz' if divisible by both 3 and 5, otherwise print the number itself.",
+          "starterCode": "n = int(input('Enter a number: '))\n# Your code here",
+          "expectedOutput": "Input: 15 → FizzBuzz",
+          "solutionCode": "n = int(input('Enter a number: '))\nif n % 3 == 0 and n % 5 == 0:\n    print('FizzBuzz')\nelif n % 3 == 0:\n    print('Fizz')\nelif n % 5 == 0:\n    print('Buzz')\nelse:\n    print(n)",
           "testCases": [
-            { "mode": "io", "input": [], "expected": "False" }
-          ]
+            {
+              "mode": "io",
+              "input": [
+                3
+              ],
+              "expected": "Fizz"
+            },
+            {
+              "mode": "io",
+              "input": [
+                5
+              ],
+              "expected": "Buzz"
+            },
+            {
+              "mode": "io",
+              "input": [
+                15
+              ],
+              "expected": "FizzBuzz"
+            },
+            {
+              "mode": "io",
+              "input": [
+                7
+              ],
+              "expected": "7"
+            }
+          ],
+          "structureRequirements": {
+            "functions": [],
+            "mustUseForLoop": false,
+            "mustUseWhileLoop": false,
+            "forbidden": [
+              "eval(",
+              "exec("
+            ]
+          }
         }
       ]
     },
     {
-      "name": "Strings Formatting",
+      "name": "Strings",
       "description": "String formatting techniques in Python",
       "mcqs": [
         {
@@ -297,14 +405,26 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a program that asks the user for a first and last name and prints 'Your name is <last>, <first> <last>'.",
-          "starterCode": "first = input('First name: ')\nlast = input('Last name: ')\n# Your code here",
-          "expectedOutput": "First name: John, Last name: Doe → Your name is Doe, John Doe",
-          "solutionCode": "first = input('First name: ')\nlast = input('Last name: ')\nprint(f'Your name is {last}, {first} {last}')",
+          "question": "You are given a string `s = 'PythonRocks'`. Store the first part `'Python'` in a variable `first` and the second part `'Rocks'` in a variable `second` using slicing. Also, store their lengths in `len1` and `len2` respectively. Then print a message in this format: `'First part: <first> (length <len1>), Second part: <second> (length <len2>)'` using an f-string or `.format()`.",
+          "starterCode": "s = 'PythonRocks'\n# Your code here",
+          "expectedOutput": "First part: Python (length 6), Second part: Rocks (length 5)",
+          "solutionCode": "first = s[:6]\nsecond = s[6:]\nlen1 = len(first)\nlen2 = len(second)\nprint(f'First part: {first} (length {len1}), Second part: {second} (length {len2})')",
           "testCases": [
-            { "mode": "io", "input": ["John", "Doe"], "expected": "Your name is Doe, John Doe" },
-            { "mode": "io", "input": ["Ada", "Lovelace"], "expected": "Your name is Lovelace, Ada Lovelace" }
-          ]
+            {
+              "mode": "io",
+              "input": [],
+              "expected": "First part: Python (length 6), Second part: Rocks (length 5)"
+            }
+          ],
+          "structureRequirements": {
+            "mustUse": [
+              "f'"
+            ],
+            "forbidden": [
+              "eval(",
+              "exec("
+            ]
+          }
         }
       ]
     },
@@ -351,15 +471,28 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a function `count_vowels(s)` that returns the number of vowels in the string s.",
-          "starterCode": "def count_vowels(s):\n    # Your code here\n    pass",
-          "expectedOutput": "count_vowels('Python') → 1",
-          "solutionCode": "def count_vowels(s):\n    return sum(1 for c in s.lower() if c in 'aeiou')",
+          "question": "You are given a string `s = '  Python is FUN  '`. Clean up the string by removing leading and trailing spaces, then convert it to lowercase and store in `clean_lower`. Next, count how many times the letter `'n'` appears in the cleaned string and store in `n_count`. Finally, print a message using an f-string: `'Cleaned string: <clean_lower>, n appears <n_count> times.'`",
+          "starterCode": "s = '  Python is FUN  '\n# Your code here",
+          "expectedOutput": "Cleaned string: python is fun, n appears 2 times.",
+          "solutionCode": "clean_lower = s.strip().lower()\nn_count = clean_lower.count('n')\nprint(f'Cleaned string: {clean_lower}, n appears {n_count} times.')",
           "testCases": [
-            { "mode": "function", "call": { "name": "count_vowels", "args": ["Python"] }, "expectedReturn": 1 },
-            { "mode": "function", "call": { "name": "count_vowels", "args": ["aeiouAEIOU"] }, "expectedReturn": 10 },
-            { "mode": "function", "call": { "name": "count_vowels", "args": ["xyz"] }, "expectedReturn": 0 }
-          ]
+            {
+              "mode": "io",
+              "input": [],
+              "expected": "Cleaned string: python is fun, n appears 2 times."
+            }
+          ],
+          "structureRequirements": {
+            "mustUse": [
+              ".strip()",
+              ".lower()",
+              ".count("
+            ],
+            "forbidden": [
+              "eval(",
+              "exec("
+            ]
+          }
         }
       ]
     },
@@ -394,15 +527,54 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a function `factorial(n)` that returns the factorial of n.",
-          "starterCode": "def factorial(n):\n    # Your code here\n    pass",
-          "expectedOutput": "factorial(5) → 120",
-          "solutionCode": "def factorial(n):\n    result = 1\n    for i in range(2, n+1):\n        result *= i\n    return result",
+          "question": "Write a function `square(n)` that takes a number `n` and returns its square. Then, write a function `sum_of_squares(a, b)` that returns the sum of squares of `a` and `b` using the `square` function.",
+          "starterCode": "# Your code here",
+          "expectedOutput": "sum_of_squares(2, 3) → 13",
+          "solutionCode": "def square(n):\n    return n * n\n\ndef sum_of_squares(a, b):\n    return square(a) + square(b)",
           "testCases": [
-            { "mode": "function", "call": { "name": "factorial", "args": [5] }, "expectedReturn": 120 },
-            { "mode": "function", "call": { "name": "factorial", "args": [0] }, "expectedReturn": 1 },
-            { "mode": "function", "call": { "name": "factorial", "args": [1] }, "expectedReturn": 1 }
-          ]
+            {
+              "mode": "function",
+              "call": {
+                "name": "square",
+                "args": [
+                  3
+                ]
+              },
+              "expectedReturn": 9
+            },
+            {
+              "mode": "function",
+              "call": {
+                "name": "sum_of_squares",
+                "args": [
+                  2,
+                  3
+                ]
+              },
+              "expectedReturn": 13
+            },
+            {
+              "mode": "function",
+              "call": {
+                "name": "sum_of_squares",
+                "args": [
+                  5,
+                  5
+                ]
+              },
+              "expectedReturn": 50
+            }
+          ],
+          "structureRequirements": {
+            "functions": [
+              "square",
+              "sum_of_squares"
+            ],
+            "forbidden": [
+              "eval(",
+              "exec("
+            ]
+          }
         }
       ]
     },
@@ -449,13 +621,26 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a program that prints all even numbers from 1 to 20 using a loop.",
+          "question": "Write a program that prints all even numbers from 1 to 20 using a for loop. The numbers should be printed on the same line separated by a space.\n For example: 2 4 6 8 10 12 14 16 18 20",
           "starterCode": "# Your code here",
           "expectedOutput": "2 4 6 8 10 12 14 16 18 20",
-          "solutionCode": "print(' '.join(str(i) for i in range(2, 21, 2)))",
+          "solutionCode": "for i in range(2, 21, 2):\n    print(i, end=' ')",
           "testCases": [
-            { "mode": "io", "input": [], "expected": "2 4 6 8 10 12 14 16 18 20" }
-          ]
+            {
+              "mode": "io",
+              "input": [],
+              "expected": "2 4 6 8 10 12 14 16 18 20"
+            }
+          ],
+          "structureRequirements": {
+            "functions": [],
+            "mustUseForLoop": true,
+            "mustUseWhileLoop": false,
+            "forbidden": [
+              "eval(",
+              "exec("
+            ]
+          }
         }
       ]
     },
@@ -478,14 +663,48 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a function `average(lst)` that returns the average of numbers in a list.",
-          "starterCode": "def average(lst):\n    # Your code here\n    pass",
+          "question": "Write a function named `average(lst)` that calculates and returns the average of all numbers in the given list.\n\nFollow these steps:\n1. Find the sum of all numbers in the list.\n2. Find the number of elements in the list.\n3. Divide the sum by the number of elements to get the average.\n4. Return the average value.\n\nExample:\naverage([1, 2, 3, 4]) → 2.5",
+          "starterCode": "# Your code here\n",
           "expectedOutput": "average([1, 2, 3, 4]) → 2.5",
-          "solutionCode": "def average(lst):\n    return (sum(lst) / len(lst)) if lst else 0",
+          "solutionCode": "def average(lst):\n    total = sum(lst)\n    count = len(lst)\n    return total / count if count != 0 else 0",
           "testCases": [
-            { "mode": "function", "call": { "name": "average", "args": [[1,2,3,4]] }, "expectedReturn": 2.5 },
-            { "mode": "function", "call": { "name": "average", "args": [[10,0]] }, "expectedReturn": 5 }
-          ]
+            {
+              "mode": "function",
+              "call": {
+                "name": "average",
+                "args": [
+                  [
+                    1,
+                    2,
+                    3,
+                    4
+                  ]
+                ]
+              },
+              "expectedReturn": 2.5
+            },
+            {
+              "mode": "function",
+              "call": {
+                "name": "average",
+                "args": [
+                  [
+                    10,
+                    0
+                  ]
+                ]
+              },
+              "expectedReturn": 5
+            }
+          ],
+          "structureRequirements": {
+            "mustUseForLoop": false,
+            "mustUseWhileLoop": false,
+            "forbidden": [
+              "eval(",
+              "exec("
+            ]
+          }
         }
       ]
     },
@@ -518,14 +737,57 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a function `max_in_tuple(t)` that returns the maximum element in a tuple.",
-          "starterCode": "def max_in_tuple(t):\n    # Your code here\n    pass",
+          "question": "Write a function named `max_in_tuple(t)` that returns the largest element in a given tuple.\n\nFollow these steps:\n1. Check if the tuple is not empty.\n2. Find the maximum element in the tuple.\n3. Return the maximum value.\n\nExample:\nmax_in_tuple((1, 5, 3)) → 5",
+          "starterCode": "# Your code here\n",
           "expectedOutput": "max_in_tuple((1, 5, 3)) → 5",
-          "solutionCode": "def max_in_tuple(t):\n    return max(t) if t else None",
+          "solutionCode": "def max_in_tuple(t):\n    if len(t) == 0:\n        return None\n    maximum = t[0]\n    for num in t:\n        if num > maximum:\n            maximum = num\n    return maximum",
           "testCases": [
-            { "mode": "function", "call": { "name": "max_in_tuple", "args": [[1,5,3]] }, "expectedReturn": 5 },
-            { "mode": "function", "call": { "name": "max_in_tuple", "args": [[-2,-9,-1]] }, "expectedReturn": -1 }
-          ]
+            {
+              "mode": "function",
+              "call": {
+                "name": "max_in_tuple",
+                "args": [
+                  [
+                    1,
+                    5,
+                    3
+                  ]
+                ]
+              },
+              "expectedReturn": 5
+            },
+            {
+              "mode": "function",
+              "call": {
+                "name": "max_in_tuple",
+                "args": [
+                  [
+                    -2,
+                    -9,
+                    -1
+                  ]
+                ]
+              },
+              "expectedReturn": -1
+            },
+            {
+              "mode": "function",
+              "call": {
+                "name": "max_in_tuple",
+                "args": [
+                  []
+                ]
+              },
+              "expectedReturn": null
+            }
+          ],
+          "structureRequirements": {
+            "mustUseForLoop": true,
+            "mustUseWhileLoop": false,
+            "forbidden": [
+              "max("
+            ]
+          }
         }
       ]
     },
@@ -558,14 +820,55 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a function `get_value(d, key)` that returns the value for key in dictionary d, or 'Not found' if the key doesn't exist.",
+          "question": "Complete the function `get_value(d, key)` that returns the value for the given key in dictionary `d`. If the key does not exist, return the string `'Not found'`.\n\nSteps:\n1. Check if the key exists in the dictionary.\n2. If yes, return its value.\n3. Otherwise, return `'Not found'`.\n\nExample:\nget_value({'a': 1}, 'b') → 'Not found'",
           "starterCode": "def get_value(d, key):\n    # Your code here\n    pass",
           "expectedOutput": "get_value({'a':1}, 'b') → 'Not found'",
-          "solutionCode": "def get_value(d, key):\n    return d.get(key, 'Not found')",
+          "solutionCode": "def get_value(d, key):\n    if key in d:\n        return d[key]\n    else:\n        return 'Not found'",
           "testCases": [
-            { "mode": "function", "call": { "name": "get_value", "args": [{"a":1}, "a"] }, "expectedReturn": 1 },
-            { "mode": "function", "call": { "name": "get_value", "args": [{"a":1}, "b"] }, "expectedReturn": "Not found" }
-          ]
+            {
+              "mode": "function",
+              "call": {
+                "name": "get_value",
+                "args": [
+                  {
+                    "a": 1
+                  },
+                  "a"
+                ]
+              },
+              "expectedReturn": 1
+            },
+            {
+              "mode": "function",
+              "call": {
+                "name": "get_value",
+                "args": [
+                  {
+                    "a": 1
+                  },
+                  "b"
+                ]
+              },
+              "expectedReturn": "Not found"
+            },
+            {
+              "mode": "function",
+              "call": {
+                "name": "get_value",
+                "args": [
+                  {},
+                  "x"
+                ]
+              },
+              "expectedReturn": "Not found"
+            }
+          ],
+          "structureRequirements": {
+            "mustUseIfCondition": true,
+            "forbidden": [
+              "get("
+            ]
+          }
         }
       ]
     },
@@ -598,14 +901,66 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a function `common_elements(s1, s2)` that returns a set of elements common to both sets.",
+          "question": "Complete the function `common_elements(s1, s2)` that returns a set of elements common to both sets.\n\nSteps:\n1. Convert both inputs into sets.\n2. Find the common elements present in both sets using &.\n3. Return the resulting set.\n\nExample:\ncommon_elements({1,2,3}, {2,3,4}) → {2, 3}",
           "starterCode": "def common_elements(s1, s2):\n    # Your code here\n    pass",
-          "expectedOutput": "common_elements({1,2,3}, {2,3,4}) → {2,3}",
-          "solutionCode": "def common_elements(s1, s2):\n    return set(s1) & set(s2)",
+          "expectedOutput": "common_elements({1,2,3}, {2,3,4}) → {2, 3}",
+          "solutionCode": "def common_elements(s1, s2):\n    result = set()\n    for item in s1:\n        if item in s2:\n            result.add(item)\n    return result",
           "testCases": [
-            { "mode": "function", "call": { "name": "common_elements", "args": [[1,2,3], [2,3,4]] }, "expectedPy": "{2,3}" },
-            { "mode": "function", "call": { "name": "common_elements", "args": [[1,1,1], [1]] }, "expectedPy": "{1}" }
-          ]
+            {
+              "mode": "function",
+              "call": {
+                "name": "common_elements",
+                "args": [
+                  [
+                    1,
+                    2,
+                    3
+                  ],
+                  [
+                    2,
+                    3,
+                    4
+                  ]
+                ]
+              },
+              "expectedPy": "{2, 3}"
+            },
+            {
+              "mode": "function",
+              "call": {
+                "name": "common_elements",
+                "args": [
+                  [
+                    1,
+                    1,
+                    1
+                  ],
+                  [
+                    1
+                  ]
+                ]
+              },
+              "expectedPy": "{1}"
+            },
+            {
+              "mode": "function",
+              "call": {
+                "name": "common_elements",
+                "args": [
+                  [],
+                  [
+                    5,
+                    6
+                  ]
+                ]
+              },
+              "expectedPy": "set()"
+            }
+          ],
+          "structureRequirements": {
+            "mustUseForLoop": false,
+            "forbidden": []
+          }
         }
       ]
     },
@@ -676,13 +1031,63 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a program that iterates over a list of numbers and prints only the odd numbers.",
-          "starterCode": "numbers = [1,2,3,4,5]\n# Your code here",
-          "expectedOutput": "1 3 5",
-          "solutionCode": "numbers = [1,2,3,4,5]\nprint(' '.join(str(n) for n in numbers if n % 2 == 1))",
+          "question": "Complete the function `find_duplicates(lst)` that returns a set of elements that occur more than once in the given list. Use a for loop to iterate through the list.\n\nSteps:\n1. Initialize two empty sets: `seen` and `duplicates`.\n2. Iterate through the elements of `lst` using a for loop.\n3. If an element is already in `seen`, add it to `duplicates`. Otherwise, add it to `seen`.\n4. Return the `duplicates` set.\n\nExample:\nfind_duplicates([1, 2, 2, 3, 4, 4]) → {2, 4}",
+          "starterCode": "def find_duplicates(lst):\n    # Your code here\n    pass",
+          "expectedOutput": "find_duplicates([1, 2, 2, 3, 4, 4]) → {2, 4}",
+          "solutionCode": "def find_duplicates(lst):\n    seen = set()\n    duplicates = set()\n    for item in lst:\n        if item in seen:\n            duplicates.add(item)\n        else:\n            seen.add(item)\n    return duplicates",
           "testCases": [
-            { "mode": "io", "input": [], "expected": "1 3 5" }
-          ]
+            {
+              "mode": "function",
+              "call": {
+                "name": "find_duplicates",
+                "args": [
+                  [
+                    1,
+                    2,
+                    2,
+                    3,
+                    4,
+                    4
+                  ]
+                ]
+              },
+              "expectedPy": "{2, 4}"
+            },
+            {
+              "mode": "function",
+              "call": {
+                "name": "find_duplicates",
+                "args": [
+                  [
+                    5,
+                    5,
+                    5,
+                    5
+                  ]
+                ]
+              },
+              "expectedPy": "{5}"
+            },
+            {
+              "mode": "function",
+              "call": {
+                "name": "find_duplicates",
+                "args": [
+                  [
+                    1,
+                    2,
+                    3,
+                    4
+                  ]
+                ]
+              },
+              "expectedPy": "set()"
+            }
+          ],
+          "structureRequirements": {
+            "mustUseForLoop": true,
+            "forbidden": []
+          }
         }
       ]
     },
@@ -753,14 +1158,32 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a program that checks if a user-input number is in a predefined list of numbers and prints 'Found' or 'Not Found'.",
-          "starterCode": "numbers = [2,4,6,8]\nnum = int(input('Enter a number: '))\n# Your code here",
-          "expectedOutput": "Enter a number: 4 → Found",
-          "solutionCode": "numbers = [2,4,6,8]\nnum = int(input('Enter a number: '))\nprint('Found' if num in numbers else 'Not Found')",
+          "question": "Write a program that checks if the entered password contains the '@' character using a membership operator. If it contains '@', print 'Valid password'; otherwise, print 'Invalid password'.",
+          "starterCode": "password = input('Enter password: ')\n# Your code here",
+          "expectedOutput": "Enter password: my@pass → Valid password",
+          "solutionCode": "password = input('Enter password: ')\nif '@' in password:\n    print('Valid password')\nelse:\n    print('Invalid password')",
           "testCases": [
-            { "mode": "io", "input": [4], "expected": "Found" },
-            { "mode": "io", "input": [5], "expected": "Not Found" }
-          ]
+            {
+              "mode": "io",
+              "input": [
+                "my@pass"
+              ],
+              "expected": "Valid password"
+            },
+            {
+              "mode": "io",
+              "input": [
+                "mypassword"
+              ],
+              "expected": "Invalid password"
+            }
+          ],
+          "structureRequirements": {
+            "mustUseForLoop": false,
+            "mustUseWhileLoop": false,
+            "functions": [],
+            "forbidden": []
+          }
         }
       ]
     }

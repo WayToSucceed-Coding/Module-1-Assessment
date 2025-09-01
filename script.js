@@ -11,6 +11,7 @@ let linearItems = [];
 const answeredMap = new Map(); // index -> {status, topic, answer, correctAnswer}
 const codeMap = new Map();     // index -> user code
 const topicProgress = new Map(); // topic -> {completed, total, correct}
+const userAnswers = {}
 
 const moduleInfo = document.getElementById('moduleInfo');
 const letsBeginBtn = document.getElementById('letsBeginBtn');
@@ -206,11 +207,12 @@ function escapeHtml(text) {
 function renderQuestionText(question) {
     const containerFont = 'Arial, sans-serif'; // main font
     const lines = question.split('\n');
+    console.log(lines)
     return `<div style="font-family:${containerFont}; font-size:16px;">` +
         lines.map(line => {
             if (line.startsWith('    ') || line.startsWith('\t')) {
                 // code line: preserve indentation, no <pre>
-                return `<code style="white-space: pre;">${line.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code><br>`;
+                return `<code style="white-space: pre;">${line.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</code><br>`;
             } else {
                 return `<span>${line}</span><br>`;
             }
@@ -251,9 +253,9 @@ function renderCodeItem(task) {
 
     mcqView.style.display = 'none';
     codeView.style.display = 'block';
+    taskTitle.style.whiteSpace = 'pre-wrap';
     taskTitle.textContent = task.question || '';
     taskDescription.textContent = task.description || '';
-
 
 
     const savedCode = codeMap.get(`${currentTopicIndex}-${currentQuestionIndex}`);
@@ -298,27 +300,27 @@ function setupEditor() {
         autoCloseQuotes: true,
         foldGutter: false,
         gutters: ["CodeMirror-linenumbers"],
-extraKeys: {
-    "Tab": function(cm) {
-        if (cm.somethingSelected()) cm.indentSelection("add");
-        else cm.replaceSelection("    ", "end");
-    },
-    "Shift-Tab": "indentLess",
-    "Backspace": function(cm) {
-        const cursor = cm.getCursor();
-        const line = cm.getLine(cursor.line);
-        const beforeCursor = line.slice(0, cursor.ch);
+        extraKeys: {
+            "Tab": function (cm) {
+                if (cm.somethingSelected()) cm.indentSelection("add");
+                else cm.replaceSelection("    ", "end");
+            },
+            "Shift-Tab": "indentLess",
+            "Backspace": function (cm) {
+                const cursor = cm.getCursor();
+                const line = cm.getLine(cursor.line);
+                const beforeCursor = line.slice(0, cursor.ch);
 
-        // If cursor is only in leading whitespace
-        if (/^\s+$/.test(beforeCursor)) {
-            const indentSize = cm.getOption("indentUnit") || 4;
-            const toRemove = beforeCursor.length % indentSize || indentSize;
-            cm.replaceRange("", {line: cursor.line, ch: cursor.ch - toRemove}, {line: cursor.line, ch: cursor.ch});
-        } else {
-            cm.deleteH(-1, "char"); // normal backspace
-        }
-    }
-},indentWithTabs: false,
+                // If cursor is only in leading whitespace
+                if (/^\s+$/.test(beforeCursor)) {
+                    const indentSize = cm.getOption("indentUnit") || 4;
+                    const toRemove = beforeCursor.length % indentSize || indentSize;
+                    cm.replaceRange("", { line: cursor.line, ch: cursor.ch - toRemove }, { line: cursor.line, ch: cursor.ch });
+                } else {
+                    cm.deleteH(-1, "char"); // normal backspace
+                }
+            }
+        }, indentWithTabs: false,
         smartIndent: true,
         electricChars: true,
         matchBrackets: true,
@@ -415,46 +417,98 @@ sys.stdout, sys.stderr = _sys_stdout, _sys_stderr
         runBtn.disabled = false;
     }
 }
+function checkCodeStructure(code, requirements) {
+    const errors = [];
 
-async function submitCurrentCode() {
-    const item = linearItems[currentQuestionIndex];
-    if (!item || item.type !== 'code') return;
+    // Check for required function definitions
+    if (requirements.functions) {
+        requirements.functions.forEach(fn => {
+            if (!code.includes(`def ${fn}(`)) {
+                errors.push(`Missing required function: ${fn}`);
+            }
+        });
+    }
 
-    const code = codeMirrorEditor.getValue();
-    runBtn.disabled = true;
-    submitBtn.disabled = true;
-    setOutputs({ message: 'Submitting your code…', status: 'info' });
+    // Check if 'for' loop is required
+    if (requirements.mustUseForLoop && !code.includes('for ')) {
+        errors.push("Missing required 'for' loop");
+    }
 
-    try {
-        const pyo = await ensurePyodide();
+    // Check if 'while' loop is required
+    if (requirements.mustUseWhileLoop && !code.includes('while ')) {
+        errors.push("Missing required 'while' loop");
+    }
+
+    // Check forbidden patterns
+    if (requirements.forbidden && requirements.forbidden.some(f => code.includes(f))) {
+        errors.push("Forbidden usage detected: " + requirements.forbidden.filter(f => code.includes(f)).join(', '));
+    }
+
+    return errors; // Empty array = passed structure check
+}
+
+async function submitCurrentCode() {                             // Define an async function: allows use of await for Pyodide calls.
+    const item = linearItems[currentQuestionIndex];              // Grab the current question/item from a linear list.
+    if (!item || item.type !== 'code') return;                   // Guard: exit if no item or it isn’t a code-type question.
+
+    const code = codeMirrorEditor.getValue();                    // Read the student’s code from the CodeMirror editor.
+    runBtn.disabled = true;                                      // Disable the "Run" button to prevent double-submits.
+    submitBtn.disabled = true;                                   // Disable the "Submit" button too.
+    setOutputs({
+        message: 'Submitting your code…',               // Show a status message in the UI…
+        status: 'info'
+    });
+
+    try {                                                        // Begin main try: most of the logic lives here.
+        const pyo = await ensurePyodide();                       // Ensure Pyodide is loaded and get a handle to it.
 
         // Get test cases from the current item
-        let testCases = item.data.testCases || [];
+        let testCases = item.data.testCases || [];               // Pull test cases from the item (may be empty).
         // Backward compatibility: if only expectedOutput is provided, create a basic single test
-        if (testCases.length === 0 && item.data.expectedOutput) {
-            testCases = [{
+        if (testCases.length === 0 && item.data.expectedOutput) { // If no testCases but an expectedOutput exists…
+            testCases = [{                                       // …build a single I/O test case from it.
                 mode: 'io',
                 input: [],
                 expected: String(item.data.expectedOutput).trim()
             }];
         }
-        if (testCases.length === 0) {
+        if (testCases.length === 0) {                            // Still no tests? That’s a hard error.
             throw new Error('No test cases defined for this problem');
         }
 
-        let allPassed = true;
-        const results = [];
+        const structureReqs = item.data.structureRequirements || {};
+        const structureErrors = checkCodeStructure(code, structureReqs);
+
+        if (structureErrors.length > 0) {
+            setOutputs({
+                message: '❌ Structure check failed:\n' + structureErrors.join('\n'),
+                status: 'error'
+            });
+
+            answeredMap.set(`${currentTopicIndex}-${currentQuestionIndex}`, {
+                status: 'incorrect',
+                topic: item.topic,
+                answer: code,
+                correctAnswer: 'Fix structure errors: ' + structureErrors.join('; ')
+            });
+
+            return; // Stop execution if structure fails
+        }
+
+        let allPassed = true;                                    // Track overall pass/fail across all tests.
+        const results = [];                                      // Collect per-test results for reporting.
 
         // Run each test case
-        for (let i = 0; i < testCases.length; i++) {
-            const testCase = testCases[i];
-            
-            try {
-                const mode = (testCase.mode || (testCase.call ? 'function' : 'io'));
+        for (let i = 0; i < testCases.length; i++) {             // Iterate through every test case…
+            const testCase = testCases[i];                       // …current test case.
 
-                if (mode === 'io') {
+            try {                                                // Per-test try: failures in one test don’t stop others.
+                const mode = (testCase.mode ||                   // Determine mode: explicit testCase.mode if set…
+                    (testCase.call ? 'function' : 'io')); // …else infer: if .call exists → 'function', else 'io'.
+
+                if (mode === 'io') {                             // =========== I/O MODE (print/input based tasks) ===========
                     // Clear and set up IO capture and mocked input
-                await pyo.runPythonAsync(`
+                    await pyo.runPythonAsync(`                  
 import sys, io, json, builtins
 _stdout_buffer = io.StringIO()
 _stderr_buffer = io.StringIO()
@@ -474,38 +528,43 @@ def mock_input(prompt=""):
         return ""
 
 builtins.input = mock_input
-`);
+`);                                                             // ↑ Captures stdout/stderr, prepares a mock input() queue,
+                    // and monkey-patches builtins.input to feed test inputs.
+                    // NOTE: the second `return ""` is unreachable dead code.
 
                     // Execute the user's code in an isolated namespace per test
-                    await pyo.runPythonAsync(`
-import json
-_code_src = json.loads('''${JSON.stringify(code)}''')
+                 await pyo.runPythonAsync(`
 _ns = {}
-exec(_code_src, _ns, _ns)
-`);
+exec("""${code.replace(/"""/g, '\\"\\"\\"')}""", _ns, _ns)`);   // ↑ Loads JS string safely via JSON, execs into _ns dict.
 
                     // Restore and capture
-                await pyo.runPythonAsync(`
+                    await pyo.runPythonAsync(`                   
 _out_text = _stdout_buffer.getvalue()
 _err_text = _stderr_buffer.getvalue()
 sys.stdout, sys.stderr = _sys_stdout, _sys_stderr
 `);
 
-                const outText = pyo.globals.get('_out_text') || '';
-                const errText = pyo.globals.get('_err_text') || '';
-                    if (errText) throw new Error(errText);
+                    const outText = pyo.globals.get('_out_text') || ''; // Get captured stdout back into JS.
+                    const errText = pyo.globals.get('_err_text') || ''; // Get captured stderr back into JS.
+                    if (errText) throw new Error(errText);       // If any errors were printed, treat test as failed.
 
                     // For IO tasks, allow selecting which lines to compare
-                    const linesMode = testCase.lines || (testCase.onlyLastLine === false ? 'all' : 'last'); // 'last' | 'all'
-                    const cleanedLines = outText.split('\n').map(s => s.trim()).filter(Boolean);
-                    const actualOutput = linesMode === 'last' ? (cleanedLines[cleanedLines.length - 1] || '') : cleanedLines.join(' ');
+                    const linesMode = testCase.lines ||          // Decide whether to compare only last line or all lines.
+                        (testCase.onlyLastLine === false ? 'all' : 'last'); // default is 'last'.
+                    const cleanedLines = outText.split('\n')     // Split output into lines…
+                        .map(s => s.trim())
+                        .filter(Boolean); // …trim and drop blank lines.
+                    const actualOutput =                         // Build comparable output string:
+                        linesMode === 'last'                     // - last line only, or
+                            ? (cleanedLines[cleanedLines.length - 1] || '')
+                            : cleanedLines.join(' ');                // - all lines joined by spaces.
 
                     // Optional strict mode (no normalization)
-                    if (testCase.strict === true) {
+                    if (testCase.strict === true) {              // If strict mode: exact string equality only.
                         const passedStrict = actualOutput === String(testCase.expected);
                         const passed = passedStrict;
-                        if (!passed) allPassed = false;
-                        results.push({
+                        if (!passed) allPassed = false;          // Track global failure.
+                        results.push({                           // Record detailed result for this test.
                             testNumber: i + 1,
                             input: Array.isArray(testCase.input) ? testCase.input : [testCase.input],
                             expected: testCase.expected,
@@ -513,20 +572,21 @@ sys.stdout, sys.stderr = _sys_stdout, _sys_stderr
                             passed: passed,
                             fullOutput: outText
                         });
-                        continue;
+                        continue;                                // Move to next test (skip flexible matching below).
                     }
 
                     // Regex mode for flexible matching
-                    if (testCase.compare === 'regex' && typeof testCase.expectedRegex === 'string') {
+                    if (testCase.compare === 'regex' &&          // If regex comparison is requested…
+                        typeof testCase.expectedRegex === 'string') {
                         let re = null;
                         try {
                             re = new RegExp(testCase.expectedRegex);
                         } catch (_) {
-                            re = null;
+                            re = null;                           // Bad regex → automatically fail.
                         }
-                        const passed = re ? re.test(actualOutput) : false;
+                        const passed = re ? re.test(actualOutput) : false; // Test regex against actual.
                         if (!passed) allPassed = false;
-                        results.push({
+                        results.push({                           // Record result.
                             testNumber: i + 1,
                             input: Array.isArray(testCase.input) ? testCase.input : [testCase.input],
                             expected: `/${testCase.expectedRegex}/`,
@@ -534,66 +594,63 @@ sys.stdout, sys.stderr = _sys_stdout, _sys_stderr
                             passed: passed,
                             fullOutput: outText
                         });
-                        continue;
+                        continue;                                // Move to next test.
                     }
 
                     // Normalize both sides: lowercase, collapse spaces, normalize punctuation spacing
-                    const normalize = (s) => {
+                    const normalize = (s) => {                   // Helper to make comparisons tolerant of spacing/case.
                         let t = String(s).toLowerCase().trim();
                         t = t.replace(/\s+/g, ' ');            // collapse spaces
                         t = t.replace(/\s*,\s*/g, ', ');       // comma spacing -> ", "
                         t = t.replace(/\s*:\s*/g, ': ');       // colon spacing -> ": "
                         t = t.replace(/\s*;\s*/g, '; ');       // semicolon spacing
-                        t = t.replace(/\s*\.\s*/g, '.');      // no space before period
+                        t = t.replace(/\s*\.\s*/g, '.');       // no space before period
                         t = t.replace(/\s*!\s*/g, '!');        // no space before exclamation
-                        t = t.replace(/\s*\?\s*/g, '?');      // no space before question mark
+                        t = t.replace(/\s*\?\s*/g, '?');       // no space before question mark
                         return t;
                     };
-                    const stripPunct = (s) => normalize(s).replace(/[.,;:!?"'`]/g, '');
-                    const stripControl = (s) => normalize(s).replace(/[\u0000-\u001F\u007F]/g, '');
-                    const expectedOutput = normalize(testCase.expected);
-                    const actualOutputLower = normalize(actualOutput);
-                    let passed = (actualOutputLower === expectedOutput);
-                    if (!passed) {
-                        // Fallbacks: contains check and punctuation-insensitive compare
-                        const actualNoP = stripPunct(actualOutput);
+                    const stripPunct = (s) => normalize(s).replace(/[.,;:!?"'`]/g, ''); // Remove punctuation.
+                    const stripControl = (s) => normalize(s).replace(/[\u0000-\u001F\u007F]/g, ''); // Remove control chars.
+                    const expectedOutput = normalize(testCase.expected); // Pre-normalize expected.
+                    const actualOutputLower = normalize(actualOutput);   // Pre-normalize actual.
+                    let passed = (actualOutputLower === expectedOutput); // 1) exact match after normalization?
+                    if (!passed) {                          // If not, try some fallbacks…
+                        const actualNoP = stripPunct(actualOutput);      // …punctuation-insensitive…
                         const expectedNoP = stripPunct(testCase.expected);
-                        passed = passed || (actualOutputLower.includes(expectedOutput));
-                        passed = passed || (actualNoP === expectedNoP);
-                        passed = passed || (actualNoP.includes(expectedNoP));
-                        // Control-char-insensitive compare
-                        const actualNoCtrl = stripControl(actualOutput);
-                        passed = passed || (normalize(actualNoCtrl) === expectedOutput);
+                        passed = passed || (actualOutputLower.includes(expectedOutput)); // …substring ok…
+                        passed = passed || (actualNoP === expectedNoP);                  // …or full eq w/o punct…
+                        passed = passed || (actualNoP.includes(expectedNoP));           // …or substring w/o punct.
+                        const actualNoCtrl = stripControl(actualOutput);                // …ignore control chars…
+                        passed = passed || (normalize(actualNoCtrl) === expectedOutput);// …and compare again.
                     }
 
-                if (!passed) allPassed = false;
-                results.push({
-                    testNumber: i + 1,
-                    input: Array.isArray(testCase.input) ? testCase.input : [testCase.input],
-                    expected: testCase.expected,
-                    actual: actualOutput,
-                    passed: passed,
-                    fullOutput: outText
-                });
+                    if (!passed) allPassed = false;           // Update global flag.
+                    results.push({                            // Save result (and the full output for debugging).
+                        testNumber: i + 1,
+                        input: Array.isArray(testCase.input) ? testCase.input : [testCase.input],
+                        expected: testCase.expected,
+                        actual: actualOutput,
+                        passed: passed,
+                        fullOutput: outText
+                    });
 
-                } else if (mode === 'function') {
+                } else if (mode === 'function') {             // =========== FUNCTION MODE (call and compare return) ===========
                     // Execute user's code to define functions in isolated namespace
-                    await pyo.runPythonAsync(`
+                    await pyo.runPythonAsync(`                
 import json
-_code_src = json.loads('''${JSON.stringify(code)}''')
 _ns = {}
-exec(_code_src, _ns, _ns)
+exec("""${code.replace(/"""/g, '\\"\\"\\"')}""", _ns, _ns)
 `);
 
                     // Prepare function call with JSON-encoded args/kwargs
-                    const call = testCase.call || {};
-                    const funcName = call.name;
-                    const argsJson = JSON.stringify(call.args || []);
-                    const kwargsJson = JSON.stringify(call.kwargs || {});
-                    const expectedProvided = Object.prototype.hasOwnProperty.call(testCase, 'expectedReturn');
-                    const expectedPy = testCase.expectedPy; // optional python expression string
+                    const call = testCase.call || {};         // Call specification: { name, args, kwargs }.
+                    const funcName = call.name;               // Function name to call.
+                    const argsJson = JSON.stringify(call.args || []); // Positional args serialized.
+                    const kwargsJson = JSON.stringify(call.kwargs || {}); // Keyword args serialized.
+                    const expectedProvided = Object.prototype.hasOwnProperty.call(testCase, 'expectedReturn'); // Did test set an expectedReturn?
+                    const expectedPy = testCase.expectedPy;   // Optional Python expression string to compute expected.
 
-                    await pyo.runPythonAsync(`
+                    await pyo.runPythonAsync(`                
 import json
 _fn_name = ${JSON.stringify(funcName)}
 _args = json.loads('''${argsJson}''')
@@ -615,40 +672,43 @@ else:
     _expected_obj = _expected_return
 
 _function_passed = (_result_value == _expected_obj)
-`);
+`);                                                          // ↑ Calls the user function and compares result vs expected.
 
-                    const passed = Boolean(pyo.globals.get('_function_passed'));
-                    if (!passed) allPassed = false;
+                    const passed = Boolean(pyo.globals.get('_function_passed')); // Pull pass/fail back to JS.
+                    if (!passed) allPassed = false;            // Update global summary.
 
                     // Convert result and expected to strings for reporting
-                    await pyo.runPythonAsync(`
+                    await pyo.runPythonAsync(`              
 _result_str = str(_result_value)
 _expected_str = str(_expected_obj)
 `);
-                    const actualStr = pyo.globals.get('_result_str') || '';
-                    const expectedStr = pyo.globals.get('_expected_str') || '';
+                    const actualStr = pyo.globals.get('_result_str') || '';   // Fetch actual as string.
+                    const expectedStr = pyo.globals.get('_expected_str') || '';// Fetch expected as string.
 
-                    results.push({
+                    results.push({                            // Save a concise per-test record for function mode.
                         testNumber: i + 1,
                         input: { call: call },
                         expected: expectedPy ? expectedPy : testCase.expectedReturn,
                         actual: actualStr,
                         passed: passed
                     });
-                } else {
+                } else {                                      // Unknown mode guard.
                     throw new Error(`Unknown test mode: ${mode}`);
                 }
 
                 // Clean up
-                ['_stdout_buffer', '_stderr_buffer', '_sys_stdout', '_sys_stderr', '_out_text', '_err_text', '_test_inputs', '_input_index'].forEach(varName => {
-                    if (pyo.globals.has(varName)) {
-                        pyo.globals.delete(varName);
-                    }
-                });
+                ['_stdout_buffer', '_stderr_buffer',          // After each test, attempt to delete temp Python globals
+                    '_sys_stdout', '_sys_stderr',                // from the Pyodide global namespace (best effort).
+                    '_out_text', '_err_text',
+                    '_test_inputs', '_input_index'].forEach(varName => {
+                        if (pyo.globals.has(varName)) {           // If present…
+                            pyo.globals.delete(varName);           // …delete it.
+                        }
+                    });
 
-            } catch (error) {
-                allPassed = false;
-                results.push({
+            } catch (error) {                                  // Per-test failure handler (runtime errors, asserts, etc.)
+                allPassed = false;                             // Mark overall as not all-passed.
+                results.push({                                 // Record this test’s error details.
                     testNumber: i + 1,
                     input: Array.isArray(testCase.input) ? testCase.input : [testCase.input],
                     expected: testCase.expected,
@@ -659,78 +719,75 @@ _expected_str = str(_expected_obj)
         }
 
         // Generate test results message
-        let resultMessage = '';
+        let resultMessage = '';                                 // Start building the summary message shown to the user.
         if (allPassed) {
-            resultMessage = '✅ All tests passed!\n\n';
+            resultMessage = '✅ All tests passed!\n\n';         // Happy path header.
         } else {
-            resultMessage = '❌ Some tests failed:\n\n';
+            resultMessage = '❌ Some tests failed:\n\n';        // Failure header.
         }
 
         // Add detailed test results: hide passed test details, show only failures
-        const failed = results.filter(r => !r.passed);
-        const passedCount = results.length - failed.length;
-        if (failed.length === 0) {
-            resultMessage += `All ${results.length} tests passed.\n`;
+        const failed = results.filter(r => !r.passed);          // Compute failed subset.
+        const passedCount = results.length - failed.length;     // Count passes.
+        if (failed.length === 0) {                              // If none failed…
+           // resultMessage += `All ${results.length} tests passed.\n`; // …say so concisely.
         } else {
-            resultMessage += `${passedCount} passed, ${failed.length} failed.\n\n`;
-            failed.forEach(result => {
+            resultMessage += `${passedCount} passed, ${failed.length} failed.\n\n`; // Summary counts.
+            failed.forEach(result => {                          // For each failed test, print a detailed block:
                 resultMessage += `Test ${result.testNumber}: ❌ FAIL\n`;
-            resultMessage += `  Input: ${JSON.stringify(result.input)}\n`;
-            resultMessage += `  Expected: "${result.expected}"\n`;
-            resultMessage += `  Got: "${result.actual}"\n`;
-                if (result.fullOutput) {
-                resultMessage += `  Full Output: ${result.fullOutput.replace(/\n/g, '\\n')}\n`;
-            }
-            resultMessage += '\n';
-        });
+                resultMessage += `  Input: ${JSON.stringify(result.input)}\n`;
+                resultMessage += `  Expected: "${result.expected}"\n`;
+                resultMessage += `  Got: "${result.actual}"\n`;
+                resultMessage += '\n';
+            });
         }
 
         // Update progress and UI
-        const status = allPassed ? 'correct' : 'incorrect';
-        answeredMap.set(`${currentTopicIndex}-${currentQuestionIndex}`, { 
+        const status = allPassed ? 'correct' : 'incorrect';     // Decide a compact status label.
+        answeredMap.set(`${currentTopicIndex}-${currentQuestionIndex}`, { // Persist answer status for nav/progress.
             status: status,
             topic: item.topic,
             answer: code,
             correctAnswer: allPassed ? 'All tests passed' : 'Check expected vs actual output'
         });
 
-        setOutputs({ 
-            message: resultMessage, 
-            status: allPassed ? 'success' : 'error' 
+        setOutputs({                                            // Push the summary message to the UI with success/error.
+            message: resultMessage,
+            status: allPassed ? 'success' : 'error'
         });
 
-        updateTopicProgress();
-        renderQuestionNav();
-        checkTopicCompletion();
+        updateTopicProgress();                                  // Recompute topic-level progress bar/badges.
+        renderQuestionNav();                                    // Rerender question navigation (e.g., checkmarks).
+        checkTopicCompletion();                                 // Possibly unlock next topic / mark as complete.
 
         // Make editor read-only after submission
-        if (codeMirrorEditor) {
-            codeMirrorEditor.setOption('readOnly', true);
-        }
+        // if (codeMirrorEditor) {                                 // Prevent editing after submission for this attempt.
+        //     codeMirrorEditor.setOption('readOnly', true);
+        // }
 
-    } catch (err) {
-        console.error('Error in submitCurrentCode:', err);
-        
-        let errorMessage = '❌ Submission failed: ';
-        if (err.message.includes('SyntaxError')) {
+    } catch (err) {                                             // Outer catch: problems outside per-test loop (e.g., setup).
+        console.error('Error in submitCurrentCode:', err);      // Log to console for devs.
+
+        let errorMessage = '❌ Submission failed: ';            // Build user-facing failure message.
+        if (err.message.includes('SyntaxError')) {              // Heuristic: syntax errors in Python → friendlier hint.
             errorMessage += 'Check your Python syntax';
         } else {
-            errorMessage += err.message;
+            errorMessage += err.message;                        // Otherwise show the raw message.
         }
 
-        setOutputs({ message: errorMessage, status: 'error' });
-        
-        answeredMap.set(`${currentTopicIndex}-${currentQuestionIndex}`, { 
-            status: 'incorrect', 
+        setOutputs({ message: errorMessage, status: 'error' }); // Show the error in the UI.
+
+        answeredMap.set(`${currentTopicIndex}-${currentQuestionIndex}`, { // Record as incorrect for progress.
+            status: 'incorrect',
             topic: item.topic,
             answer: code,
             correctAnswer: 'Fix the errors in your code'
         });
-        
-        updateTopicProgress();
+
+        updateTopicProgress();                                   // Keep UI in sync even on failure.
         renderQuestionNav();
         checkTopicCompletion();
-    } finally {
+    } finally {                                                  // Always re-enable buttons at the very end.
         runBtn.disabled = false;
         submitBtn.disabled = false;
     }
@@ -767,9 +824,9 @@ function checkTopicCompletion() {
     const topic = currentModuleData.topics[currentTopicIndex];
     const progress = topicProgress.get(topic.name);
 
-    if (progress.completed === progress.total) {
-        finishTopicAssessment();
-    }
+    // if (progress.completed === progress.total) {
+    //     finishTopicAssessment();
+    // }
 }
 
 function checkAllTopicsCompleted() {
@@ -812,31 +869,6 @@ function htmlToElement(html) {
     return template.content.firstChild;
 }
 
-function deepEqual(a, b) {
-    if (a === b) return true;
-    if (a == null || b == null) return false;
-    if (typeof a !== typeof b) return false;
-    if (typeof a !== 'object') return false;
-
-    if (Array.isArray(a) !== Array.isArray(b)) return false;
-    if (Array.isArray(a)) {
-        if (a.length !== b.length) return false;
-        for (let i = 0; i < a.length; i++) {
-            if (!deepEqual(a[i], b[i])) return false;
-        }
-        return true;
-    }
-
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
-    if (keysA.length !== keysB.length) return false;
-
-    for (const key of keysA) {
-        if (!keysB.includes(key)) return false;
-        if (!deepEqual(a[key], b[key])) return false;
-    }
-    return true;
-}
 
 function escapeForPre(text) {
     return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -964,7 +996,7 @@ function showTopicReport(showAnswers = true) {
             <p>Score: ${Math.round((progress.correct / progress.total) * 100)}%</p>
         </div>
         <div class="topic-report">
-            <h4>Question Results</h4>
+            <h4>Review Your Answers</h4>
             ${generateTopicQuestionResults(showAnswers)}
         </div>
     `;
@@ -1030,8 +1062,7 @@ function generateTopicQuestionResults(showAnswers = true) {
                 : 'Unanswered';
 
         html += `<div class="question-result ${item.type === 'code' ? 'code-task' : ''}">
-                    <div class="question-text">${questionText}</div>
-                    
+                    <div class="question-text">${questionText}</div>           
                     <span class="result-status ${statusClass}">${statusText}</span>`;
 
         if (showAnswers) {
@@ -1051,13 +1082,13 @@ function generateTopicQuestionResults(showAnswers = true) {
                         const mode = tc.mode || (tc.call ? 'function' : 'io');
                         if (mode === 'io') {
                             const inputs = Array.isArray(tc.input) ? tc.input : [tc.input];
-                            return `Test ${i+1}: input=${escapeForPre(inputs.join(', '))} → ${escapeForPre(tc.expected)}`;
+                            return `Test ${i + 1}: input=${escapeForPre(inputs.join(', '))} → ${escapeForPre(tc.expected)}`;
                         } else {
                             const call = tc.call || {};
-                            const argList = Array.isArray(call.args)?call.args.map(a=>String(a)).join(', '):'';
+                            const argList = Array.isArray(call.args) ? call.args.map(a => String(a)).join(', ') : '';
                             const callStr = `${call.name || 'function'}(${argList})`;
                             const expectedStr = tc.expectedPy ? tc.expectedPy : String(tc.expectedReturn);
-                            return `Test ${i+1}: ${escapeForPre(callStr)} → ${escapeForPre(expectedStr)}`;
+                            return `Test ${i + 1}: ${escapeForPre(callStr)} → ${escapeForPre(expectedStr)}`;
                         }
                     }).join('\n');
                 } else {
@@ -1340,7 +1371,7 @@ async function downloadOverallResultsPdf({ labels, scores }) {
         let y = 100 + chartH;
         y += 10;
         const totalTopics = labels.length;
-        const avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : 0;
+        const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
         doc.text(`Topics: ${totalTopics}   Average Score: ${avg}%`, 40, y);
         y += 16;
         doc.setFont('helvetica', 'bold');
@@ -1407,7 +1438,7 @@ async function emailOverallResultsToTeacher({ labels, scores }) {
         if (!window.emailjs) throw new Error('EmailJS not loaded');
         if (!window.__emailjs_initialized) {
             // TODO: Replace with your EmailJS public key
-            emailjs.init({ publicKey: 'YOUR_EMAILJS_PUBLIC_KEY' });
+            emailjs.init('JdXDu4oujbgETRzLc');
             window.__emailjs_initialized = true;
         }
 
@@ -1419,14 +1450,12 @@ async function emailOverallResultsToTeacher({ labels, scores }) {
         });
 
         // TODO: Replace serviceId/templateId and params
-        const serviceId = 'YOUR_EMAILJS_SERVICE_ID';
-        const templateId = 'YOUR_EMAILJS_TEMPLATE_ID';
+        const serviceId = '';//service id in emailjs
+        const templateId = '';//template id in emailjs
         const params = {
-            teacher_email: 'teacher@example.com',
+            teacher_email: '', // Teacher's email address
             subject: 'Student Assessment Results',
             message: 'Attached is the overall results PDF.',
-            attachment: base64pdf,
-            filename: 'overall-results.pdf'
         };
         await emailjs.send(serviceId, templateId, params);
         alert('Results emailed to teacher.');

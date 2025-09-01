@@ -336,7 +336,7 @@
 
       /* Disabled state for topic buttons */
       .topic-button:disabled {
-    
+
           /* make it visually faded */
           cursor: not-allowed;
           /* show disabled cursor */
@@ -420,7 +420,6 @@
           padding: 16px;
           background: #f8fafc;
           border-radius: 12px;
-          border-left: 4px solid var(--accent);
       }
 
       #mcqOptions {
@@ -518,61 +517,89 @@
           /* Ensure it's scrollable within the main container (which hides overflow) */
           max-height: calc(100vh - 140px);
       }
+
       /* Ensure overall results view is visible and scrollable */
       #overallResultsView {
           flex: 1;
           overflow: auto;
           min-height: 400px;
       }
+
       #overallResultsView canvas#overallChart {
           width: 100% !important;
           height: 420px !important;
           display: block;
       }
+
       .overall-header {
           display: flex;
           align-items: baseline;
           justify-content: space-between;
           margin-bottom: 12px;
       }
+
       .overall-grid {
           display: grid;
           grid-template-columns: repeat(4, minmax(140px, 1fr));
           gap: 12px;
           margin-bottom: 16px;
       }
+
       .overall-card {
           background: #ffffff;
           border: 1px solid var(--border);
           border-radius: 10px;
           padding: 12px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
       }
+
       .metric-label {
           font-size: 12px;
           color: var(--muted);
       }
+
       .metric-value {
           font-size: 22px;
           font-weight: 700;
           color: var(--text);
       }
-      .metric-value.ok { color: var(--ok); }
-      .metric-value.accent { color: var(--accent); }
+
+      .metric-value.ok {
+          color: var(--ok);
+      }
+
+      .metric-value.accent {
+          color: var(--accent);
+      }
+
       .overall-content {
           display: grid;
           grid-template-columns: 2fr 1fr;
           gap: 16px;
       }
+
       .overall-table-wrapper {
           max-height: 420px;
           overflow: auto;
       }
-      .overall-table { width: 100%; border-collapse: collapse; }
-      .overall-table th, .overall-table td {
-          text-align: left; padding: 8px; border-bottom: 1px solid var(--border);
+
+      .overall-table {
+          width: 100%;
+          border-collapse: collapse;
       }
-      .overall-table th { font-size: 12px; color: var(--muted); }
+
+      .overall-table th,
+      .overall-table td {
+          text-align: left;
+          padding: 8px;
+          border-bottom: 1px solid var(--border);
+      }
+
+      .overall-table th {
+          font-size: 12px;
+          color: var(--muted);
+      }
+
       /* Ensure topic report is comfortably scrollable */
       #topicReportContent {
           max-height: none;
@@ -990,32 +1017,28 @@
 
       .question-result {
           display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
-          padding: 12px 0;
+          gap: 16px;
+          /* spacing between columns */
+          align-items: flex-start;
+          /* align top of all columns */
           border-bottom: 1px solid #f1f5f9;
           background: #f8fafc;
           border-radius: 8px;
           padding: 16px;
-          margin-bottom: 10px;
+          margin-bottom: 20px;
+
       }
 
       .question-result .question-text {
-          width: 70%;
-          /* or any suitable percentage */
+          flex: 2 1 0;
+          /* left column takes more space */
           white-space: pre-wrap;
-          /* preserves whitespace and wraps as needed */
-
-
+          /* keep line breaks from JSON */
       }
 
-      /* Make code tasks visually align with MCQs */
-      .question-result.code-task {
-          border-left: 4px solid var(--accent);
-      }
 
       .question-result>div>div {
-          margin-bottom: 4px;
+          margin-bottom: 25px;
           font-size: 13px;
       }
 
@@ -1024,6 +1047,11 @@
       }
 
       .result-status {
+          flex: 0 0 150px;
+          /* middle column fixed width */
+          text-align: center;
+          align-self: center;
+          /* vertically center the status */
           justify-content: space-between;
           padding: 5px 20px;
           border-radius: 12px;
@@ -1031,8 +1059,6 @@
           font-weight: 600;
           width: 250px;
           margin-left: 100px;
-          text-align: center;
-
       }
 
       .result-status.correct {
@@ -1050,12 +1076,17 @@
           color: white
       }
 
-
-
       .answers-wrapper {
-          flex: 0 0 50%;
-          /* fixed 70% width, no shrinking */
-          text-align: right;
+          flex: 2 2 0;
+          /* right column takes same space as question */
+          text-align: left;
+          /* keeps code left-aligned */
+          margin: 0;
+          padding-left: 50px;
+          white-space: pre-wrap;
+          align-self: flex-end;
+          font-family: monospace;
+          border-radius: 4px;
       }
 
       /* Keep topic report action buttons visible */
