@@ -31,7 +31,6 @@ const questionNav = document.getElementById('questionNav');
 const mcqSubmitBtn = document.getElementById("mcqSubmitBtn");
 const runBtn = document.getElementById("runBtn");
 const submitBtn = document.getElementById("submitBtn");
-const showOverallTop = document.getElementById('showOverallResultsBtnTop');
 
 const finishBtn = document.getElementById('finishBtn');
 const finishReportView = document.getElementById('finishReportView');
@@ -42,7 +41,7 @@ const taskDescription = document.getElementById('taskDescription');
 
 const downloadBtn = document.getElementById('downloadPdfBtn');
 const mainContainer = document.querySelector('.main-container');
-
+   
 // ----------------------
 // Module loading & UI
 // ----------------------
@@ -83,14 +82,41 @@ function buildTopicSelectionGrid() {
         topicSelectionGrid.appendChild(topicButton);
     });
 
+    // Toggle top-level overall results button if all topics completed
+    const showOverallTop = document.getElementById('showOverallResultsBtnTop');
+    if (showOverallTop) {
+        if (completedTopics.length && currentModuleData.topics && completedTopics.length === currentModuleData.topics.length) {
+            showOverallTop.style.display = '';
+            showOverallTop.onclick = () => {
+                document.getElementById('topicSelectionPane').style.display = 'none';
+                showOverallResults();
+            };
+        } else {
+            showOverallTop.style.display = 'none';
+            showOverallTop.onclick = null;
+        }
+    }
 }
-
 document.getElementById('backBtn').onclick = () => {
     window.scrollTo(0, 0);
     assessmentArea.style.display = 'none';
     topicReportView.style.display = 'none';
     document.getElementById('topicSelectionPane').style.display = 'block';
     disableCompletedTopics();
+    // Toggle top-level overall results button if all topics completed
+    const showOverallTop = document.getElementById('showOverallResultsBtnTop');
+    if (showOverallTop) {
+        if (completedTopics.length && currentModuleData.topics && completedTopics.length === currentModuleData.topics.length) {
+            showOverallTop.style.display = '';
+            showOverallTop.onclick = () => {
+                document.getElementById('topicSelectionPane').style.display = 'none';
+                showOverallResults();
+            };
+        } else {
+            showOverallTop.style.display = 'none';
+            showOverallTop.onclick = null;
+        }
+    }
 };
 
 function switchToTopic(topicIndex) {
@@ -877,7 +903,6 @@ function setupEventListeners() {
     runBtn.addEventListener('click', runCurrentCode);
     submitBtn.addEventListener('click', submitCurrentCode);
     finishBtn.addEventListener('click', finishTopicAssessment);
-    showOverallTop.addEventListener('click', showOverallResults) 
 }
 
 
@@ -1023,10 +1048,20 @@ function showTopicReport(showAnswers = true) {
         }
     };
 
-    if (checkAllTopicsCompleted()) {
-            showOverallTop.style.display = 'block';       
-    } 
-    
+    // Show overall results button if all topics are completed
+    const overallBtn = topicReportView.querySelector('#showOverallResultsBtn');
+    if (overallBtn) {
+        if (checkAllTopicsCompleted()) {
+            overallBtn.style.display = '';
+            overallBtn.onclick = () => {
+                topicReportView.style.display = 'none';
+                showOverallResults();
+            };
+        } else {
+            overallBtn.style.display = 'none';
+            overallBtn.onclick = null;
+        }
+    }
 }
 
 function generateTopicQuestionResults(showAnswers = true) {
@@ -1139,10 +1174,20 @@ function disableCompletedTopics() {
         }
     });
 
-    if(checkAllTopicsCompleted()) {
-        showOverallTop.style.display = 'block';       
+    // Also update the top-level results button visibility when returning
+    const showOverallTop = document.getElementById('showOverallResultsBtnTop');
+    if (showOverallTop) {
+        if (completedTopics.length && currentModuleData.topics && completedTopics.length === currentModuleData.topics.length) {
+            showOverallTop.style.display = '';
+            showOverallTop.onclick = () => {
+                document.getElementById('topicSelectionPane').style.display = 'none';
+                showOverallResults();
+            };
+        } else {
+            showOverallTop.style.display = 'none';
+            showOverallTop.onclick = null;
+        }
     }
-
 }
 
 
@@ -1328,7 +1373,7 @@ function showOverallResults() {
     }
 
     // PDF download button
-    if (downloadBtn) {
+     if (downloadBtn) {
         downloadBtn.onclick = async () => {
             await downloadOverallResultsPdf({ labels, scores });
         };
@@ -1357,7 +1402,7 @@ async function downloadOverallResultsPdf() {
     const margin = 12;
     const lineH = 6;
     const bottomMargin = 15; // space reserved for footer/page number
-    let yPos = 20;
+    let yPos = 10;
 
     const col1Width = 80; // Question
     const col2Width = 35; // Status
