@@ -41,7 +41,7 @@ const taskDescription = document.getElementById('taskDescription');
 
 const downloadBtn = document.getElementById('downloadPdfBtn');
 const mainContainer = document.querySelector('.main-container');
-   
+
 // ----------------------
 // Module loading & UI
 // ----------------------
@@ -82,6 +82,10 @@ function buildTopicSelectionGrid() {
         topicSelectionGrid.appendChild(topicButton);
     });
 
+    showOverallResultsBtn();
+}
+
+function showOverallResultsBtn() {
     // Toggle top-level overall results button if all topics completed
     const showOverallTop = document.getElementById('showOverallResultsBtnTop');
     if (showOverallTop) {
@@ -1160,20 +1164,7 @@ function disableCompletedTopics() {
         }
     });
 
-    // Also update the top-level results button visibility when returning
-    const showOverallTop = document.getElementById('showOverallResultsBtnTop');
-    if (showOverallTop) {
-        if (completedTopics.length && currentModuleData.topics && completedTopics.length === currentModuleData.topics.length) {
-            showOverallTop.style.display = '';
-            showOverallTop.onclick = () => {
-                document.getElementById('topicSelectionPane').style.display = 'none';
-                showOverallResults();
-            };
-        } else {
-            showOverallTop.style.display = 'none';
-            showOverallTop.onclick = null;
-        }
-    }
+    showOverallResultsBtn();
 }
 
 
@@ -1359,7 +1350,7 @@ function showOverallResults() {
     }
 
     // PDF download button
-     if (downloadBtn) {
+    if (downloadBtn) {
         downloadBtn.onclick = async () => {
             await downloadOverallResultsPdf({ labels, scores });
         };
