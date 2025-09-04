@@ -31,6 +31,7 @@ const questionNav = document.getElementById('questionNav');
 const mcqSubmitBtn = document.getElementById("mcqSubmitBtn");
 const runBtn = document.getElementById("runBtn");
 const submitBtn = document.getElementById("submitBtn");
+const showOverallTop = document.getElementById('showOverallResultsBtnTop');
 
 const finishBtn = document.getElementById('finishBtn');
 const finishReportView = document.getElementById('finishReportView');
@@ -82,25 +83,8 @@ function buildTopicSelectionGrid() {
         topicSelectionGrid.appendChild(topicButton);
     });
 
-    showOverallResultsBtn();
 }
 
-function showOverallResultsBtn() {
-    // Toggle top-level overall results button if all topics completed
-    const showOverallTop = document.getElementById('showOverallResultsBtnTop');
-    if (showOverallTop) {
-        if (completedTopics.length && currentModuleData.topics && completedTopics.length === currentModuleData.topics.length) {
-            showOverallTop.style.display = '';
-            showOverallTop.onclick = () => {
-                document.getElementById('topicSelectionPane').style.display = 'none';
-                showOverallResults();
-            };
-        } else {
-            showOverallTop.style.display = 'none';
-            showOverallTop.onclick = null;
-        }
-    }
-}
 document.getElementById('backBtn').onclick = () => {
     window.scrollTo(0, 0);
     assessmentArea.style.display = 'none';
@@ -893,6 +877,7 @@ function setupEventListeners() {
     runBtn.addEventListener('click', runCurrentCode);
     submitBtn.addEventListener('click', submitCurrentCode);
     finishBtn.addEventListener('click', finishTopicAssessment);
+    showOverallTop.addEventListener('click', showOverallResults) 
 }
 
 
@@ -1038,20 +1023,10 @@ function showTopicReport(showAnswers = true) {
         }
     };
 
-    // Show overall results button if all topics are completed
-    const overallBtn = topicReportView.querySelector('#showOverallResultsBtn');
-    if (overallBtn) {
-        if (checkAllTopicsCompleted()) {
-            overallBtn.style.display = '';
-            overallBtn.onclick = () => {
-                topicReportView.style.display = 'none';
-                showOverallResults();
-            };
-        } else {
-            overallBtn.style.display = 'none';
-            overallBtn.onclick = null;
-        }
-    }
+    if (checkAllTopicsCompleted()) {
+            showOverallTop.style.display = 'block';       
+    } 
+    
 }
 
 function generateTopicQuestionResults(showAnswers = true) {
@@ -1164,7 +1139,10 @@ function disableCompletedTopics() {
         }
     });
 
-    showOverallResultsBtn();
+    if(checkAllTopicsCompleted()) {
+        showOverallTop.style.display = 'block';       
+    }
+
 }
 
 
