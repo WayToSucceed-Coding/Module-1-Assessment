@@ -56,26 +56,26 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a program that reads two integers and prints their sum and product in the format: 'Sum = X, Product = Y'.",
+          "question": "Write a program that asks the user for their name and age, then prints a greeting like 'Hello <name>, you are <age> years old.'",
           "starterCode": "# Your code here",
-          "expectedOutput": "If input is 4 and 5 → Output: Sum = 9, Product = 20",
-          "solutionCode": "a = int(input('Enter first number: '))\nb = int(input('Enter second number: '))\nprint('Sum =', a + b, ', Product =', a * b)",
+          "expectedOutput": "Hello Alice, you are 20 years old.",
+          "solutionCode": "name = input('Enter name')\nage = input('Enter age')\nprint(f'Hello {name}, you are {age} years old.')",
           "testCases": [
             {
               "mode": "io",
               "input": [
-                "4",
-                "5"
+                "Alice",
+                20
               ],
-              "expected": "Sum = 9, Product = 20"
+              "expected": "Hello Alice, you are 20 years old."
             },
             {
               "mode": "io",
               "input": [
-                "7",
-                "3"
+                "Bob",
+                35
               ],
-              "expected": "Sum = 10, Product = 21"
+              "expected": "Hello Bob, you are 35 years old."
             }
           ],
           "structureRequirements": {
@@ -663,7 +663,7 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a function named `average(lst)` that calculates and returns the average of all numbers in the given list.\n\nFollow these steps:\n1. Find the sum of all numbers in the list.\n2. Find the number of elements in the list.\n3. Divide the sum by the number of elements to get the average.\n4. Return the average value.\n\nExample:\naverage([1, 2, 3, 4]) → 2.5",
+          "question": "Write a function named `average(lst)` that calculates and returns the average of all numbers in the given list.\n\nFollow these steps:\n1. Find the sum of all numbers in the list.\n2. Find the number of elements in the list.\n3. Divide the sum by the number of elements to get the average.\n4. Return the average value.\n\n",
           "starterCode": "# Your code here\n",
           "expectedOutput": "average([1, 2, 3, 4]) → 2.5",
           "solutionCode": "def average(lst):\n    total = sum(lst)\n    count = len(lst)\n    return total / count if count != 0 else 0",
@@ -737,7 +737,7 @@
       ],
       "codeTasks": [
         {
-          "question": "Write a function named `max_in_tuple(t)` that returns the largest element in a given tuple.\n\nFollow these steps:\n1. Check if the tuple is not empty.\n2. Find the maximum element in the tuple.\n3. Return the maximum value.\n\nExample:\nmax_in_tuple((1, 5, 3)) → 5",
+          "question": "Write a function named `max_in_tuple(t)` that returns the largest element in a given tuple.\n\nFollow these steps:\n1. Check if the tuple is not empty.\n2. Find the maximum element in the tuple.\n3. Return the maximum value.\n\n",
           "starterCode": "# Your code here\n",
           "expectedOutput": "max_in_tuple((1, 5, 3)) → 5",
           "solutionCode": "def max_in_tuple(t):\n    if len(t) == 0:\n        return None\n    maximum = t[0]\n    for num in t:\n        if num > maximum:\n            maximum = num\n    return maximum",
@@ -820,7 +820,7 @@
       ],
       "codeTasks": [
         {
-          "question": "Complete the function `get_value(d, key)` that returns the value for the given key in dictionary `d`. If the key does not exist, return the string `'Not found'`.\n\nSteps:\n1. Check if the key exists in the dictionary.\n2. If yes, return its value.\n3. Otherwise, return `'Not found'`.\n\nExample:\nget_value({'a': 1}, 'b') → 'Not found'",
+          "question": "Complete the function `get_value(d, key)` that returns the value for the given key in dictionary `d`. If the key does not exist, return the string `'Not found'`.\n\nSteps:\n1. Check if the key exists in the dictionary.\n2. If yes, return its value.\n3. Otherwise, return `'Not found'`.\n\n",
           "starterCode": "def get_value(d, key):\n    # Your code here\n    pass",
           "expectedOutput": "get_value({'a':1}, 'b') → 'Not found'",
           "solutionCode": "def get_value(d, key):\n    if key in d:\n        return d[key]\n    else:\n        return 'Not found'",
@@ -901,7 +901,7 @@
       ],
       "codeTasks": [
         {
-          "question": "Complete the function `common_elements(s1, s2)` that returns a set of elements common to both sets.\n\nSteps:\n1. Convert both inputs into sets.\n2. Find the common elements present in both sets using &.\n3. Return the resulting set.\n\nExample:\ncommon_elements({1,2,3}, {2,3,4}) → {2, 3}",
+          "question": "Complete the function `common_elements(s1, s2)` that returns a set of elements common to both sets.\n\nSteps:\n1. Convert both inputs into sets.\n2. Find the common elements present in both sets using &.\n3. Return the resulting set.\n\n",
           "starterCode": "def common_elements(s1, s2):\n    # Your code here\n    pass",
           "expectedOutput": "common_elements({1,2,3}, {2,3,4}) → {2, 3}",
           "solutionCode": "def common_elements(s1, s2):\n    result = set()\n    for item in s1:\n        if item in s2:\n            result.add(item)\n    return result",
@@ -1031,7 +1031,7 @@
       ],
       "codeTasks": [
         {
-          "question": "Complete the function `find_duplicates(lst)` that returns a set of elements that occur more than once in the given list. Use a for loop to iterate through the list.\n\nSteps:\n1. Initialize two empty sets: `seen` and `duplicates`.\n2. Iterate through the elements of `lst` using a for loop.\n3. If an element is already in `seen`, add it to `duplicates`. Otherwise, add it to `seen`.\n4. Return the `duplicates` set.\n\nExample:\nfind_duplicates([1, 2, 2, 3, 4, 4]) → {2, 4}",
+          "question": "Complete the function `find_duplicates(lst)` that returns a set of elements that occur more than once in the given list. Use a for loop to iterate through the list.\n\nSteps:\n1. Initialize two empty sets: `seen` and `duplicates`.\n2. Iterate through the elements of `lst` using a for loop.\n3. If an element is already in `seen`, add it to `duplicates`. Otherwise, add it to `seen`.\n4. Return the `duplicates` set.\n\n",
           "starterCode": "def find_duplicates(lst):\n    # Your code here\n    pass",
           "expectedOutput": "find_duplicates([1, 2, 2, 3, 4, 4]) → {2, 4}",
           "solutionCode": "def find_duplicates(lst):\n    seen = set()\n    duplicates = set()\n    for item in lst:\n        if item in seen:\n            duplicates.add(item)\n        else:\n            seen.add(item)\n    return duplicates",

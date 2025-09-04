@@ -11,7 +11,9 @@ let linearItems = [];
 const answeredMap = new Map(); // index -> {status, topic, answer, correctAnswer}
 const codeMap = new Map();     // index -> user code
 const topicProgress = new Map(); // topic -> {completed, total, correct}
-const userAnswers = {}
+const userAnswers = {};
+var totalQuestions = 0;
+var totalCorrect = 0;
 
 const moduleInfo = document.getElementById('moduleInfo');
 const letsBeginBtn = document.getElementById('letsBeginBtn');
@@ -37,6 +39,9 @@ const codeView = document.getElementById('codeView');
 const taskTitle = document.getElementById('taskTitle');
 const taskDescription = document.getElementById('taskDescription');
 
+const downloadBtn = document.getElementById('downloadPdfBtn');
+const mainContainer = document.querySelector('.main-container');
+   
 // ----------------------
 // Module loading & UI
 // ----------------------
@@ -44,7 +49,6 @@ async function loadModuleIntoUI() {
     try {
         const resp = await fetch('modules/assessment-topics.json', { cache: 'no-store' });
         currentModuleData = resp.ok ? await resp.json() : EMBEDDED_DEMO_MODULE;
-        console.log('Loaded module data:', currentModuleData);
         moduleInfo.textContent = currentModuleData.moduleName || 'Demo Module';
         buildTopicSelectionGrid();
         currentTopicIndex = 0;
@@ -94,6 +98,8 @@ function buildTopicSelectionGrid() {
     }
 }
 document.getElementById('backBtn').onclick = () => {
+    window.scrollTo(0, 0);
+    assessmentArea.style.display = 'none';
     topicReportView.style.display = 'none';
     document.getElementById('topicSelectionPane').style.display = 'block';
     disableCompletedTopics();
@@ -103,6 +109,8 @@ function switchToTopic(topicIndex) {
     currentTopicIndex = topicIndex;
     currentQuestionIndex = 0;
     loadTopicQuestions();
+
+    window.scrollTo(0, 0);
 
     // Hide topic selection pane and show assessment pane
     document.getElementById('topicSelectionPane').style.display = 'none';
@@ -207,7 +215,7 @@ function escapeHtml(text) {
 function renderQuestionText(question) {
     const containerFont = 'Arial, sans-serif'; // main font
     const lines = question.split('\n');
-    console.log(lines)
+
     return `<div style="font-family:${containerFont}; font-size:16px;">` +
         lines.map(line => {
             if (line.startsWith('    ') || line.startsWith('\t')) {
@@ -533,7 +541,7 @@ builtins.input = mock_input
                     // NOTE: the second `return ""` is unreachable dead code.
 
                     // Execute the user's code in an isolated namespace per test
-                 await pyo.runPythonAsync(`
+                    await pyo.runPythonAsync(`
 _ns = {}
 exec("""${code.replace(/"""/g, '\\"\\"\\"')}""", _ns, _ns)`);   // ↑ Loads JS string safely via JSON, execs into _ns dict.
 
@@ -730,7 +738,7 @@ _expected_str = str(_expected_obj)
         const failed = results.filter(r => !r.passed);          // Compute failed subset.
         const passedCount = results.length - failed.length;     // Count passes.
         if (failed.length === 0) {                              // If none failed…
-           // resultMessage += `All ${results.length} tests passed.\n`; // …say so concisely.
+            // resultMessage += `All ${results.length} tests passed.\n`; // …say so concisely.
         } else {
             resultMessage += `${passedCount} passed, ${failed.length} failed.\n\n`; // Summary counts.
             failed.forEach(result => {                          // For each failed test, print a detailed block:
@@ -885,6 +893,8 @@ function setupEventListeners() {
 
 
 function showTopicSelection() {
+
+    window.scrollTo(0, 0);
     // Hide welcome pane and show topic selection pane
     document.getElementById('welcomePane').style.display = 'none';
     document.getElementById('topicSelectionPane').style.display = 'block';
@@ -959,6 +969,8 @@ function finishTopicAssessment() {
         const stored = JSON.parse(localStorage.getItem('topicScores') || '{}');
         stored[topic.name] = { correct: progress.correct, total: progress.total };
         localStorage.setItem('topicScores', JSON.stringify(stored));
+        localStorage.setItem('answeredMap', JSON.stringify(Array.from(answeredMap.entries())));
+
     } catch (e) {
         console.warn('Unable to persist topic scores:', e);
     }
@@ -976,6 +988,7 @@ function markTopicCompleted(topicName) {
 }
 
 function showTopicReport(showAnswers = true) {
+    window.scrollTo(0, 0);
     const topic = currentModuleData.topics[currentTopicIndex];
     const progress = topicProgress.get(topic.name);
 
@@ -1040,9 +1053,32 @@ function showTopicReport(showAnswers = true) {
 function generateTopicQuestionResults(showAnswers = true) {
 
     let html = '';
+    const topic = currentModuleData.topics[currentTopicIndex];
+    linearItems = [];
+
+    // Add MCQs for this topic
+    (topic.mcqs || []).forEach(q => {
+        linearItems.push({
+            type: 'mcq',
+            data: q,
+            topic: topic.name
+        });
+    });
+
+    // Add code tasks for this topic
+    (topic.codeTasks || []).forEach(t => {
+        linearItems.push({
+            type: 'code',
+            data: t,
+            topic: topic.name
+        });
+    });
+
+    var temp = new Map(JSON.parse(localStorage.getItem('answeredMap') || '{}'))
+
     linearItems.forEach((item, idx) => {
 
-        const answer = answeredMap.get(`${currentTopicIndex}-${idx}`) || {
+        const answer = temp.get(`${currentTopicIndex}-${idx}`) || {
             status: 'unanswered',
             topic: item.topic,
             answer: 'Unanswered',
@@ -1191,6 +1227,8 @@ boot();
 // Overall Results (Chart)
 // ----------------------
 function showOverallResults() {
+
+    window.scrollTo(0, 0);
     // Hide other views
     const sel = document.getElementById('topicSelectionPane');
     if (sel) sel.style.display = 'none';
@@ -1203,9 +1241,9 @@ function showOverallResults() {
     const labels = [];
     const scores = [];
     const rows = [];
-    let totalQuestions = 0;
-    let totalCorrect = 0;
+
     const stored = JSON.parse(localStorage.getItem('topicScores') || '{}');
+
     currentModuleData.topics.forEach(t => {
         labels.push(t.name);
         const saved = stored[t.name];
@@ -1267,7 +1305,11 @@ function showOverallResults() {
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: (ctx) => ` ${ctx.parsed.y}%`
+                        label: function (context) {
+                            // context.dataIndex gives the index of the hovered item
+                            let value = scores[context.dataIndex];
+                            return `${context.label}: ${value}%`;
+                        }
                     }
                 }
             }
@@ -1293,7 +1335,18 @@ function showOverallResults() {
             tbody.appendChild(tr);
         });
     }
+    const reviewAnswers = document.getElementById('reviewAnswers');
 
+    currentModuleData.topics.forEach((t, i) => {
+        currentTopicIndex = i;
+        const div = `
+        <div class="report-summary" style="align-items: center;justify-content: center;">
+            <h3 style="font-size:30px; text-align:center; margin-bottom:20px">${t.name}</h3>
+            ${generateTopicQuestionResults(true)}
+        </div>`
+
+        reviewAnswers.appendChild(htmlToElement(div));
+    })
     // Back button
     const backBtn = document.getElementById('backFromOverallBtn');
     if (backBtn) {
@@ -1306,8 +1359,7 @@ function showOverallResults() {
     }
 
     // PDF download button
-    const downloadBtn = document.getElementById('downloadPdfBtn');
-    if (downloadBtn) {
+     if (downloadBtn) {
         downloadBtn.onclick = async () => {
             await downloadOverallResultsPdf({ labels, scores });
         };
@@ -1320,74 +1372,208 @@ function showOverallResults() {
             await emailOverallResultsToTeacher({ labels, scores });
         };
     }
+
 }
 
-// Generate a simple PDF (client-side) containing chart snapshot and watermark
-async function downloadOverallResultsPdf({ labels, scores }) {
-    try {
-        // Lazy load jsPDF from CDN
-        if (!window.jspdf) {
-            await new Promise((resolve, reject) => {
-                const s = document.createElement('script');
-                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-                s.onload = resolve;
-                s.onerror = reject;
-                document.head.appendChild(s);
-            });
-        }
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+async function downloadOverallResultsPdf() {
 
-        // Watermark image (logo.png) at center
-        const img = new Image();
-        img.src = 'assets/logo.png';
-        await new Promise(res => { img.onload = res; img.onerror = res; });
+    downloadBtn.disabled = true;
+    btnText.textContent = 'Generating PDF...';
 
-        const pageW = doc.internal.pageSize.getWidth();
-        const pageH = doc.internal.pageSize.getHeight();
-        const wmW = Math.min(200, pageW * 0.3);
-        const wmH = img.naturalHeight ? (img.naturalHeight * wmW / img.naturalWidth) : wmW;
-        doc.addImage(img, 'PNG', (pageW - wmW) / 2, (pageH - wmH) / 2, wmW, wmH, undefined, 'FAST');
-        doc.setGState(new doc.GState({ opacity: 0.15 }));
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
 
-        // Header
-        doc.setGState(new doc.GState({ opacity: 1 }));
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(20);
-        doc.text('Overall Results', 40, 50);
-        doc.setDrawColor(200);
-        doc.line(40, 58, pageW - 40, 58);
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 12;
+    const lineH = 6;
+    const bottomMargin = 15; // space reserved for footer/page number
+    let yPos = 20;
 
-        // Add chart snapshot from canvas
-        const canvas = document.getElementById('overallChart');
-        const dataUrl = canvas.toDataURL('image/png');
-        const chartW = pageW - 80;
-        const chartH = chartW * (canvas.height / canvas.width);
-        doc.addImage(dataUrl, 'PNG', 40, 80, chartW, chartH, undefined, 'FAST');
+    const col1Width = 80; // Question
+    const col2Width = 35; // Status
+    const col3Width = pageWidth - margin * 2 - col1Width - col2Width; // Answers
 
-        // Summary and table of scores
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(12);
-        let y = 100 + chartH;
-        y += 10;
-        const totalTopics = labels.length;
-        const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
-        doc.text(`Topics: ${totalTopics}   Average Score: ${avg}%`, 40, y);
-        y += 16;
-        doc.setFont('helvetica', 'bold');
-        doc.text('Topic', 40, y); doc.text('Score', pageW - 120, y);
-        y += 12; doc.setFont('helvetica', 'normal');
-        labels.forEach((label, i) => {
-            doc.text(label, 40, y);
-            doc.text(`${scores[i]}%`, pageW - 120, y);
-            y += 14;
+    const split = (txt, width) => pdf.splitTextToSize(String(txt ?? ''), width);
+
+    const loadImageAsync = (src) =>
+        new Promise((resolve, reject) => {
+            const img = new Image();
+            img.src = src;
+            img.onload = () => resolve(img);
+            img.onerror = reject;
         });
 
-        doc.save('overall-results.pdf');
-    } catch (err) {
-        alert('Failed to generate PDF: ' + err.message);
+    const headerImg = await loadImageAsync('assets/banner.png');
+    const watermarkImg = await loadImageAsync('assets/header.png');
+    const logoImg = await loadImageAsync('assets/logo.png');
+    const logoWidth = 25;
+    const logoHeight = (logoImg.height * logoWidth) / logoImg.width;
+
+    // ---- Page 1: Header + Total Score + Chart + Table ----
+    const headerW = 120;
+    const headerH = (headerImg.height * headerW) / headerImg.width;
+    pdf.addImage(headerImg, 'PNG', (pageWidth - headerW) / 2, yPos, headerW, headerH);
+    yPos += headerH + 10;
+
+    //Total score and percentage
+    const percentage = totalQuestions > 0 ? ((totalCorrect / totalQuestions) * 100).toFixed(2) : 0;
+
+    pdf.setFontSize(12).setFont(undefined, 'bold');
+    pdf.text('Total Score:', margin, yPos);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(`${totalCorrect} / ${totalQuestions}`, margin + 35, yPos);
+
+    pdf.setFont(undefined, 'bold');
+    const percText = 'Percentage:';
+    pdf.text(percText, pageWidth - margin - 50, yPos);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(`${percentage}%`, pageWidth - margin - 12, yPos);
+    yPos += 14;
+
+    // Chart
+    const chartCanvas = document.getElementById('overallChart');
+    if (chartCanvas) {
+        const chartUrl = chartCanvas.toDataURL('image/png', 1.0);
+        const maxChartH = 80;
+        let chartW = pageWidth - margin * 2;
+        let chartH = (chartCanvas.height * chartW) / chartCanvas.width;
+        if (chartH > maxChartH) { chartH = maxChartH; chartW = (chartCanvas.width * chartH) / chartCanvas.height; }
+        pdf.addImage(chartUrl, 'PNG', margin, yPos, chartW, chartH);
+        yPos += chartH + 10;
     }
+
+    // Table
+    const tableEl = document.getElementById('overallTable');
+    if (tableEl) {
+        pdf.autoTable({
+            html: tableEl,
+            startY: yPos,
+            margin: { left: margin, right: margin },
+            styles: { fontSize: 9 },
+            theme: 'grid'
+        });
+        yPos = pdf.lastAutoTable.finalY + 10;
+    }
+
+    // ---- Review Answers (page 2+) ----
+    pdf.addPage();
+    yPos = 20;
+    pdf.addImage(logoImg, 'PNG', pageWidth - logoWidth - 10, 10, logoWidth, logoHeight);
+
+    pdf.setFontSize(14).setFont(undefined, 'bold');
+    pdf.text('Review Answers', margin, yPos);
+    yPos += 10;
+    pdf.setFontSize(10).setFont(undefined, 'normal');
+
+    const answeredMap = new Map(JSON.parse(localStorage.getItem('answeredMap') || '[]'));
+
+    // ---- Updated ensureSpace function ----
+    const ensureSpace = (heightNeeded) => {
+        const bottomMargin = 10; // smaller margin
+        if (yPos + heightNeeded > pageHeight - bottomMargin) {
+            pdf.addPage();
+            yPos = 20;
+            // Add logo on new page
+            pdf.addImage(logoImg, 'PNG', pageWidth - logoWidth - 10, 10, logoWidth, logoHeight);
+        }
+    };
+
+    // Loop through topics
+    for (let tIdx = 0; tIdx < currentModuleData.topics.length; tIdx++) {
+        if (tIdx > 0) {
+            pdf.addPage();
+            yPos = 20;
+            pdf.addImage(logoImg, 'PNG', pageWidth - logoWidth - 10, 10, logoWidth, logoHeight);
+        }
+
+        const topic = currentModuleData.topics[tIdx];
+        linearItems = [];
+
+        (topic.mcqs || []).forEach(q => linearItems.push({ type: 'mcq', data: q, topic: topic.name }));
+        (topic.codeTasks || []).forEach(t => linearItems.push({ type: 'code', data: t, topic: topic.name }));
+
+        // Topic header (centered and underlined)
+        const topicFontSize = 12;
+        pdf.setFontSize(topicFontSize).setFont(undefined, 'bold');
+        const textWidth = pdf.getTextWidth(topic.name);
+        const xCenter = (pageWidth - textWidth) / 2;
+        ensureSpace(lineH);
+        pdf.text(topic.name, xCenter, yPos);
+        const underlineY = yPos + 1;
+        pdf.setLineWidth(0.5);
+        pdf.line(xCenter, underlineY, xCenter + textWidth, underlineY);
+        yPos += lineH + 6;
+
+        // Questions loop
+        linearItems.forEach((item, qIdx) => {
+            const mapKey = `${tIdx}-${qIdx}`;
+            const a = answeredMap.get(mapKey) || { status: 'unanswered', answer: 'Unanswered' };
+
+            const qText = item.type === 'mcq'
+                ? item.data.question
+                : (item.data.question || item.data.title || 'Coding Task');
+
+            const statusText = a.status ? a.status.charAt(0).toUpperCase() + a.status.slice(1) : 'Unanswered';
+
+            let yourAnswer, correctAnswer;
+            if (item.type === 'mcq') {
+                yourAnswer = a.answer === undefined ? 'Unanswered' : item.data.options[a.answer] || a.answer;
+                correctAnswer = item.data.options[item.data.answer];
+            } else {
+                yourAnswer = a.answer === undefined ? 'Unanswered' : escapeForPre(a.answer);
+                correctAnswer = item.data.solutionCode || 'Function that passes all test cases';
+            }
+
+            const answerText = `Your Answer:\n${yourAnswer}\n\nCorrect Answer:\n${correctAnswer}`;
+
+            const leftLines = split(`Q${qIdx + 1}: ${qText}`, col1Width);
+            const statusLines = split(statusText, col2Width);
+            const rightLines = split(answerText, col3Width);
+
+            const blockHeight = Math.max(leftLines.length, statusLines.length, rightLines.length) * lineH;
+            ensureSpace(blockHeight);
+
+            pdf.setFontSize(10).setFont(undefined, 'normal');
+            pdf.text(leftLines, margin, yPos);
+
+            if (a.status === 'correct') pdf.setTextColor(0, 150, 0);
+            else if (a.status === 'incorrect') pdf.setTextColor(200, 0, 0);
+            else pdf.setTextColor(100);
+            pdf.text(statusLines, margin + col1Width + 4, yPos);
+            pdf.setTextColor(0, 0, 0);
+
+            pdf.text(rightLines, margin + col1Width + col2Width + 6, yPos);
+            yPos += blockHeight + 1;
+        });
+    }
+
+    // ---- Watermark on all pages ----
+    const wmWidth = 180;
+    const wmHeight = (watermarkImg.height * wmWidth) / watermarkImg.width;
+    const wmX = (pageWidth - wmWidth + 100) / 2;
+    const wmY = (pageHeight - wmHeight + 100) / 2;
+
+    const totalPages = pdf.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.saveGraphicsState();
+        pdf.setGState(new pdf.GState({ opacity: 0.15 }));
+        pdf.addImage(watermarkImg, 'PNG', wmX, wmY, wmWidth, wmHeight, undefined, 'NONE', 55);
+        pdf.restoreGraphicsState();
+
+        pdf.setFontSize(10);
+        pdf.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+    }
+
+    pdf.save('performance-report.pdf');
+
+    downloadBtn.disabled = false;
+    btnText.textContent = 'Download';
 }
+
+
+
 
 // Email the same PDF via a webhook endpoint (needs server to relay email)
 async function emailOverallResultsToTeacher({ labels, scores }) {

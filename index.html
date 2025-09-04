@@ -10,6 +10,12 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
+    <!-- jsPDF library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- jsPDF AutoTable plugin -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="stylesheet" href="./styles.css" />
 
     <!-- CodeMirror (lightweight, CDN) -->
@@ -90,7 +96,10 @@
     <!-- Chart.js for polished charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <!-- EmailJS SDK -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"
+    ></script>
   </head>
 
   <body>
@@ -132,16 +141,22 @@
             Click on any topic to begin your assessment
           </p>
           <div id="topicSelectionGrid"></div>
-          <div style="margin-top:20px; text-align:center">
-            <button id="showOverallResultsBtnTop" class="btn btn-success" style="display:none">Show Overall Results</button>
+          <div style="margin-top: 20px; text-align: center">
+            <button
+              id="showOverallResultsBtnTop"
+              class="btn btn-success"
+              style="display: none"
+            >
+              Show Overall Results
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- Assessment View (hidden initially) -->
+    
       <div id="assessmentArea" style="display: none">
         <!--Left Pane-->
-        <div class="panel" id="leftPane">
+        <div>
           <h1>
             <img
               src="./assets/python-logo.png"
@@ -159,7 +174,7 @@
             <div class="leftPaneBtns">
               <button id="backBtn" class="btn btn-primary">
                 <span>←</span>
-                Back
+                Back To Topics
               </button>
               <button id="finishBtn" class="btn btn-green">
                 <span>🏁</span>
@@ -168,9 +183,8 @@
             </div>
           </div>
         </div>
-
-        <!-- Right Pane -->
-        <div class="panel" id="rightPane">
+        <!--Right Pane-->
+        <div id="rightPane">
           <div id="questionContainer" style="display: none">
             <h2 id="questionHeader">
               Question <span id="questionNumber"></span>
@@ -237,22 +251,56 @@ Click "Run Code" to test your solution or "Submit" to finalize your answer.</pre
             Continue to Next Topic
           </button>
           <button id="backToTopicsBtn" class="btn btn-primary">
+            <span>←</span>
             Back to Topics
           </button>
-          <button id="showOverallResultsBtn" class="btn btn-success" style="display:none">
+          <button
+            id="showOverallResultsBtn"
+            class="btn btn-success"
+            style="display: none"
+          >
             Show Overall Results
           </button>
         </div>
       </div>
 
       <!-- Overall Results View -->
-      <div id="overallResultsView" class="report-view panel" style="display:none">
-        <div class="overall-header">
-          <div>
-            <h2 style="margin:0">Overall Results</h2>
-            <div id="overallSubheading" class="muted" style="font-size:14px; margin-top:4px"></div>
+      <div
+        id="overallResultsView"
+        class="report-view panel"
+        style="display: none"
+      >
+        <div
+          style="
+            margin-top: 16px;
+            display: flex;
+            gap: 8px;
+            justify-content: space-between;
+          "
+        >
+          <div class="overall-header">
+            <div>
+              <h1 style="margin: 0; text-align: center; font-size: 35px">
+                Overall Results
+              </h1>
+              <div
+                id="overallSubheading"
+                class="muted"
+                style="font-size: 14px; margin-top: 4px"
+              ></div>
+            </div>
+            <div class="overall-meta" id="overallMeta"></div>
           </div>
-          <div class="overall-meta" id="overallMeta"></div>
+          <div>
+            <button id="downloadPdfBtn" class="btn btn-secondary no-print">
+              Download PDF
+              <span>📄</span>
+            </button>
+            <!-- <button id="emailTeacherBtn" class="btn btn-secondary">Email to Teacher</button> -->
+            <!-- <button id="backFromOverallBtn" class="btn btn-primary">
+              Back to Topics
+            </button> -->
+          </div>
         </div>
 
         <div class="overall-grid">
@@ -275,9 +323,31 @@ Click "Run Code" to test your solution or "Submit" to finalize your answer.</pre
         </div>
 
         <div class="overall-content">
+          <h2
+            style="
+              font-size: 35px;
+              max-width: 100%;
+              background-color: rgba(255, 169, 83, 0.953);
+              width: 100vw;
+              text-align: center;
+            "
+          >
+            Performance Analysis
+          </h2>
           <div class="overall-chart">
             <canvas id="overallChart" width="800" height="300"></canvas>
           </div>
+          <h2
+            style="
+              font-size: 35px;
+              max-width: 100%;
+              background-color: rgba(255, 169, 83, 0.953);
+              width: 100vw;
+              text-align: center;
+            "
+          >
+            Detailed Analysis
+          </h2>
           <div class="overall-table-wrapper">
             <table class="overall-table" id="overallTable">
               <thead>
@@ -291,12 +361,18 @@ Click "Run Code" to test your solution or "Submit" to finalize your answer.</pre
               <tbody></tbody>
             </table>
           </div>
-        </div>
-
-        <div style="margin-top:16px; display:flex; gap:8px; justify-content:flex-end">
-          <button id="downloadPdfBtn" class="btn btn-secondary">Download PDF</button>
-          <!-- <button id="emailTeacherBtn" class="btn btn-secondary">Email to Teacher</button> -->
-          <button id="backFromOverallBtn" class="btn btn-primary">Back to Topics</button>
+          <h2
+            style="
+              font-size: 35px;
+              max-width: 100%;
+              background-color: rgba(255, 169, 83, 0.953);
+              width: 100vw;
+              text-align: center;
+            "
+          >
+            Review Answers
+          </h2>
+          <div id="reviewAnswers" class="review-answers"></div>
         </div>
       </div>
     </div>
